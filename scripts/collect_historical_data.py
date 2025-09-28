@@ -23,8 +23,8 @@ Examples:
 
 import argparse
 import logging
-import sys
 from pathlib import Path
+import sys
 
 # Add src to path to import F1 prediction modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))

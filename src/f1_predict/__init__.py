@@ -1,4 +1,4 @@
-"""F1 Prediction Package
+"""F1 Prediction Package.
 
 A machine learning project for predicting Formula 1 race outcomes.
 """

@@ -3,11 +3,11 @@
 import json
 import logging
 import time
-from typing import Any, Dict, Optional, Type, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union
 from urllib.parse import urljoin
 
-import requests
 from pydantic import BaseModel, ValidationError
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -61,7 +61,7 @@ class APIError(Exception):
         self,
         message: str,
         status_code: Optional[int] = None,
-        response_data: Optional[Dict] = None,
+        response_data: Optional[dict] = None,
     ):
         """Initialize API error.
 
@@ -110,7 +110,7 @@ class BaseAPIClient:
         backoff_factor: float = 0.3,
         rate_limit_requests: int = 4,
         rate_limit_window: float = 1.0,
-        headers: Optional[Dict[str, str]] = None,
+        headers: Optional[dict[str, str]] = None,
     ):
         """Initialize the base API client.
 
@@ -176,7 +176,7 @@ class BaseAPIClient:
         """
         return urljoin(f"{self.base_url}/", endpoint.lstrip("/"))
 
-    def _handle_response(self, response: requests.Response) -> Dict[str, Any]:
+    def _handle_response(self, response: requests.Response) -> dict[str, Any]:
         """Handle API response and extract data.
 
         Args:
@@ -244,9 +244,9 @@ class BaseAPIClient:
         self,
         method: str,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: Optional[dict[str, Any]] = None,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Make HTTP request with rate limiting and error handling.
 
         Args:
@@ -307,9 +307,9 @@ class BaseAPIClient:
     def get(
         self,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
-        model: Optional[Type[T]] = None,
-    ) -> Union[Dict[str, Any], T]:
+        params: Optional[dict[str, Any]] = None,
+        model: Optional[type[T]] = None,
+    ) -> Union[dict[str, Any], T]:
         """Make GET request.
 
         Args:
@@ -340,10 +340,10 @@ class BaseAPIClient:
     def post(
         self,
         endpoint: str,
-        data: Optional[Dict[str, Any]] = None,
-        json_data: Optional[Dict[str, Any]] = None,
-        model: Optional[Type[T]] = None,
-    ) -> Union[Dict[str, Any], T]:
+        data: Optional[dict[str, Any]] = None,
+        json_data: Optional[dict[str, Any]] = None,
+        model: Optional[type[T]] = None,
+    ) -> Union[dict[str, Any], T]:
         """Make POST request.
 
         Args:

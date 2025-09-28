@@ -2,8 +2,8 @@
 
 from datetime import date
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from f1_predict.data.models import (
     Circuit,

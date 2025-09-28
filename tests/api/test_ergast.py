@@ -225,7 +225,7 @@ class TestErgastAPIClient:
         """Test getting seasons with pagination parameters."""
         mock_get.return_value = mock_seasons_response
 
-        seasons = client.get_seasons(limit=10, offset=5)
+        client.get_seasons(limit=10, offset=5)
 
         mock_get.assert_called_once_with(
             "seasons.json", params={"limit": 10, "offset": 5}
@@ -251,7 +251,7 @@ class TestErgastAPIClient:
         """Test getting a specific race."""
         mock_get.return_value = mock_races_response
 
-        races = client.get_races(season=2023, round_number=1)
+        client.get_races(season=2023, round_number=1)
 
         mock_get.assert_called_once_with("2023/1.json", params={})
 
@@ -260,7 +260,7 @@ class TestErgastAPIClient:
         """Test getting current season races."""
         mock_get.return_value = mock_races_response
 
-        races = client.get_current_season_races()
+        client.get_current_season_races()
 
         mock_get.assert_called_once_with("current.json", params={})
 
@@ -285,7 +285,7 @@ class TestErgastAPIClient:
         """Test getting drivers for a specific season."""
         mock_get.return_value = mock_drivers_response
 
-        drivers = client.get_drivers(season=2023)
+        client.get_drivers(season=2023)
 
         mock_get.assert_called_once_with("2023/drivers.json", params={})
 
@@ -416,7 +416,7 @@ class TestErgastAPIClient:
         """Test getting last race results."""
         mock_get.return_value = mock_results_response
 
-        results = client.get_last_race_results(2023)
+        client.get_last_race_results(2023)
 
         mock_get.assert_called_once_with("2023/last/results.json", params={})
 

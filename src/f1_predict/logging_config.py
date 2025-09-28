@@ -6,9 +6,9 @@ and debugging in development, testing, and production environments.
 
 import logging
 import os
-import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+import sys
+from typing import Any, Optional
 
 import structlog
 from structlog.typing import EventDict, Processor
@@ -51,10 +51,10 @@ def configure_logging(
         _ensure_log_directory(log_file)
 
 
-def _get_processors(log_format: str, enable_colors: bool) -> List[Processor]:
+def _get_processors(log_format: str, enable_colors: bool) -> list[Processor]:
     """Get the appropriate processors for the given format."""
     # Common processors for all formats
-    processors: List[Processor] = [
+    processors: list[Processor] = [
         # Add timestamp
         structlog.processors.TimeStamper(fmt="ISO"),
         # Add logger name and level
@@ -193,7 +193,7 @@ def setup_request_logging(correlation_id: str) -> structlog.BoundLogger:
 def log_function_call(
     logger: structlog.BoundLogger,
     function_name: str,
-    args: Optional[Dict[str, Any]] = None,
+    args: Optional[dict[str, Any]] = None,
     duration_ms: Optional[float] = None,
 ) -> None:
     """Log a function call with parameters and timing.
@@ -223,8 +223,8 @@ def log_function_call(
 def log_ml_metrics(
     logger: structlog.BoundLogger,
     model_name: str,
-    metrics: Dict[str, float],
-    dataset_info: Optional[Dict[str, Any]] = None,
+    metrics: dict[str, float],
+    dataset_info: Optional[dict[str, Any]] = None,
 ) -> None:
     """Log machine learning model metrics.
 
@@ -249,8 +249,8 @@ def log_ml_metrics(
 def log_data_quality(
     logger: structlog.BoundLogger,
     dataset_name: str,
-    quality_metrics: Dict[str, Any],
-    issues: Optional[List[str]] = None,
+    quality_metrics: dict[str, Any],
+    issues: Optional[list[str]] = None,
 ) -> None:
     """Log data quality assessment results.
 

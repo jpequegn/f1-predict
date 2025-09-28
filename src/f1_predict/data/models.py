@@ -7,7 +7,7 @@ all F1-related data.
 
 from datetime import date, datetime
 from datetime import time as dt_time
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -238,7 +238,7 @@ class DriverStanding(Standing):
     """Driver championship standing."""
 
     driver: Driver
-    constructors: List[Constructor] = Field(..., alias="Constructors")
+    constructors: list[Constructor] = Field(..., alias="Constructors")
 
     class Config:
         """Pydantic configuration."""
@@ -281,7 +281,7 @@ class RaceTable(BaseModel):
 
     season: Optional[str] = None
     round: Optional[str] = None
-    races: List[Race] = Field(default_factory=list, alias="Races")
+    races: list[Race] = Field(default_factory=list, alias="Races")
 
     class Config:
         """Pydantic configuration."""
@@ -295,7 +295,7 @@ class ResultsTable(BaseModel):
     season: Optional[str] = None
     round: Optional[str] = None
     race: Optional[Race] = Field(None, alias="Race")
-    results: List[Result] = Field(default_factory=list, alias="Results")
+    results: list[Result] = Field(default_factory=list, alias="Results")
 
     class Config:
         """Pydantic configuration."""
@@ -308,7 +308,7 @@ class QualifyingTable(BaseModel):
 
     season: Optional[str] = None
     round: Optional[str] = None
-    qualifying_results: List[QualifyingResult] = Field(
+    qualifying_results: list[QualifyingResult] = Field(
         default_factory=list, alias="QualifyingResults"
     )
 
@@ -323,7 +323,7 @@ class StandingsTable(BaseModel):
 
     season: Optional[str] = None
     round: Optional[str] = None
-    standings_lists: List["StandingsList"] = Field(
+    standings_lists: list["StandingsList"] = Field(
         default_factory=list, alias="StandingsLists"
     )
 
@@ -338,10 +338,10 @@ class StandingsList(BaseModel):
 
     season: str
     round: str
-    driver_standings: Optional[List[DriverStanding]] = Field(
+    driver_standings: Optional[list[DriverStanding]] = Field(
         None, alias="DriverStandings"
     )
-    constructor_standings: Optional[List[ConstructorStanding]] = Field(
+    constructor_standings: Optional[list[ConstructorStanding]] = Field(
         None, alias="ConstructorStandings"
     )
 
@@ -355,7 +355,7 @@ class DriverTable(BaseModel):
     """Driver table response."""
 
     season: Optional[str] = None
-    drivers: List[Driver] = Field(default_factory=list, alias="Drivers")
+    drivers: list[Driver] = Field(default_factory=list, alias="Drivers")
 
     class Config:
         """Pydantic configuration."""
@@ -367,7 +367,7 @@ class ConstructorTable(BaseModel):
     """Constructor table response."""
 
     season: Optional[str] = None
-    constructors: List[Constructor] = Field(default_factory=list, alias="Constructors")
+    constructors: list[Constructor] = Field(default_factory=list, alias="Constructors")
 
     class Config:
         """Pydantic configuration."""
@@ -378,7 +378,7 @@ class ConstructorTable(BaseModel):
 class CircuitTable(BaseModel):
     """Circuit table response."""
 
-    circuits: List[Circuit] = Field(default_factory=list, alias="Circuits")
+    circuits: list[Circuit] = Field(default_factory=list, alias="Circuits")
 
     class Config:
         """Pydantic configuration."""
@@ -389,7 +389,7 @@ class CircuitTable(BaseModel):
 class SeasonTable(BaseModel):
     """Season table response."""
 
-    seasons: List[Season] = Field(default_factory=list, alias="Seasons")
+    seasons: list[Season] = Field(default_factory=list, alias="Seasons")
 
     class Config:
         """Pydantic configuration."""
@@ -418,7 +418,7 @@ class RaceResponse(ErgastResponse):
     def race_table(self) -> Optional[RaceTable]:
         """Get race table from response."""
         if hasattr(self.mr_data, "RaceTable"):
-            return getattr(self.mr_data, "RaceTable")
+            return self.mr_data.RaceTable
         return None
 
 
@@ -431,7 +431,7 @@ class ResultResponse(ErgastResponse):
     def results_table(self) -> Optional[ResultsTable]:
         """Get results table from response."""
         if hasattr(self.mr_data, "RaceTable"):
-            return getattr(self.mr_data, "RaceTable")
+            return self.mr_data.RaceTable
         return None
 
 
@@ -444,7 +444,7 @@ class QualifyingResponse(ErgastResponse):
     def qualifying_table(self) -> Optional[QualifyingTable]:
         """Get qualifying table from response."""
         if hasattr(self.mr_data, "QualifyingTable"):
-            return getattr(self.mr_data, "QualifyingTable")
+            return self.mr_data.QualifyingTable
         return None
 
 
@@ -457,7 +457,7 @@ class StandingsResponse(ErgastResponse):
     def standings_table(self) -> Optional[StandingsTable]:
         """Get standings table from response."""
         if hasattr(self.mr_data, "StandingsTable"):
-            return getattr(self.mr_data, "StandingsTable")
+            return self.mr_data.StandingsTable
         return None
 
 
@@ -470,7 +470,7 @@ class DriverResponse(ErgastResponse):
     def driver_table(self) -> Optional[DriverTable]:
         """Get driver table from response."""
         if hasattr(self.mr_data, "DriverTable"):
-            return getattr(self.mr_data, "DriverTable")
+            return self.mr_data.DriverTable
         return None
 
 
@@ -483,7 +483,7 @@ class ConstructorResponse(ErgastResponse):
     def constructor_table(self) -> Optional[ConstructorTable]:
         """Get constructor table from response."""
         if hasattr(self.mr_data, "ConstructorTable"):
-            return getattr(self.mr_data, "ConstructorTable")
+            return self.mr_data.ConstructorTable
         return None
 
 
@@ -496,7 +496,7 @@ class CircuitResponse(ErgastResponse):
     def circuit_table(self) -> Optional[CircuitTable]:
         """Get circuit table from response."""
         if hasattr(self.mr_data, "CircuitTable"):
-            return getattr(self.mr_data, "CircuitTable")
+            return self.mr_data.CircuitTable
         return None
 
 
@@ -509,5 +509,5 @@ class SeasonResponse(ErgastResponse):
     def season_table(self) -> Optional[SeasonTable]:
         """Get season table from response."""
         if hasattr(self.mr_data, "SeasonTable"):
-            return getattr(self.mr_data, "SeasonTable")
+            return self.mr_data.SeasonTable
         return None

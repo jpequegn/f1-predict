@@ -1,8 +1,8 @@
 """Tests for the F1 data collector."""
 
 import json
-import tempfile
 from pathlib import Path
+import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
@@ -21,8 +21,7 @@ def temp_data_dir():
 @pytest.fixture
 def mock_client():
     """Create a mock Ergast API client."""
-    client = Mock()
-    return client
+    return Mock()
 
 
 @pytest.fixture
@@ -145,7 +144,7 @@ class TestF1DataCollector:
         assert "race_results_2020_2024.csv" in output_file
 
         # Verify CSV content
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             content = f.read()
             assert "season,round,race_name" in content
             assert "2023,1,British Grand Prix" in content
@@ -236,7 +235,7 @@ class TestF1DataCollector:
         assert "qualifying_results_2020_2024.csv" in output_file
 
         # Verify CSV content
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             content = f.read()
             assert "season,round,race_name" in content
             assert "q1,q2,q3" in content
@@ -265,7 +264,7 @@ class TestF1DataCollector:
         assert "race_schedules_2020_2024.csv" in output_file
 
         # Verify CSV content
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             content = f.read()
             assert "season,round,race_name" in content
             assert "circuit_id,circuit_name" in content
@@ -378,7 +377,7 @@ class TestF1DataCollector:
 
         # Verify file was created and contains correct data
         assert test_file.exists()
-        with open(test_file, "r") as f:
+        with open(test_file) as f:
             loaded_data = json.load(f)
 
         assert loaded_data == test_data

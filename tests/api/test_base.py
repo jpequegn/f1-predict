@@ -4,9 +4,9 @@ import json
 import time
 from unittest.mock import Mock, patch
 
+from pydantic import BaseModel
 import pytest
 import requests
-from pydantic import BaseModel
 
 from f1_predict.api.base import (
     APIError,

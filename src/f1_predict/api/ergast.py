@@ -6,7 +6,7 @@ results, standings, drivers, constructors, and circuits.
 """
 
 import logging
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from f1_predict.api.base import BaseAPIClient
 from f1_predict.data.models import (
@@ -59,7 +59,7 @@ class ErgastAPIClient(BaseAPIClient):
         self,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Season]:
+    ) -> list[Season]:
         """Get list of F1 seasons.
 
         Args:
@@ -89,7 +89,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Race]:
+    ) -> list[Race]:
         """Get races for a season or specific race.
 
         Args:
@@ -126,7 +126,7 @@ class ErgastAPIClient(BaseAPIClient):
 
         return []
 
-    def get_current_season_races(self) -> List[Race]:
+    def get_current_season_races(self) -> list[Race]:
         """Get races for the current season.
 
         Returns:
@@ -142,7 +142,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Union[int, str],
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """Get results for a specific race.
 
         Args:
@@ -181,7 +181,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """Get results for a specific driver.
 
         Args:
@@ -229,7 +229,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """Get results for a specific constructor.
 
         Args:
@@ -279,7 +279,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Union[int, str],
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[QualifyingResult]:
+    ) -> list[QualifyingResult]:
         """Get qualifying results for a specific race.
 
         Args:
@@ -321,7 +321,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[DriverStanding]:
+    ) -> list[DriverStanding]:
         """Get driver championship standings.
 
         Args:
@@ -366,7 +366,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[ConstructorStanding]:
+    ) -> list[ConstructorStanding]:
         """Get constructor championship standings.
 
         Args:
@@ -407,7 +407,7 @@ class ErgastAPIClient(BaseAPIClient):
 
         return []
 
-    def get_current_driver_standings(self) -> List[DriverStanding]:
+    def get_current_driver_standings(self) -> list[DriverStanding]:
         """Get current season driver standings.
 
         Returns:
@@ -415,7 +415,7 @@ class ErgastAPIClient(BaseAPIClient):
         """
         return self.get_driver_standings("current")
 
-    def get_current_constructor_standings(self) -> List[ConstructorStanding]:
+    def get_current_constructor_standings(self) -> list[ConstructorStanding]:
         """Get current season constructor standings.
 
         Returns:
@@ -430,7 +430,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Driver]:
+    ) -> list[Driver]:
         """Get list of drivers.
 
         Args:
@@ -486,7 +486,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Constructor]:
+    ) -> list[Constructor]:
         """Get list of constructors.
 
         Args:
@@ -551,7 +551,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Circuit]:
+    ) -> list[Circuit]:
         """Get list of circuits.
 
         Args:
@@ -610,7 +610,7 @@ class ErgastAPIClient(BaseAPIClient):
 
     def get_last_race_results(
         self, season: Optional[Union[int, str]] = None
-    ) -> List[Result]:
+    ) -> list[Result]:
         """Get results from the last completed race.
 
         Args:
@@ -638,7 +638,7 @@ class ErgastAPIClient(BaseAPIClient):
         # For now, return the first race as a placeholder
         return races[0] if races else None
 
-    def search_drivers(self, name: str) -> List[Driver]:
+    def search_drivers(self, name: str) -> list[Driver]:
         """Search for drivers by name.
 
         Args:
@@ -659,7 +659,7 @@ class ErgastAPIClient(BaseAPIClient):
             or (driver.code and name_lower in driver.code.lower())
         ]
 
-    def search_constructors(self, name: str) -> List[Constructor]:
+    def search_constructors(self, name: str) -> list[Constructor]:
         """Search for constructors by name.
 
         Args:

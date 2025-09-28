@@ -6,12 +6,11 @@ qualifying results, lap times, and pit stop data.
 """
 
 import csv
+from datetime import datetime
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
-
+from typing import Optional
 
 from f1_predict.api.ergast import ErgastAPIClient
 
@@ -42,7 +41,7 @@ class F1DataCollector:
 
         self.logger.info(f"F1DataCollector initialized for seasons {self.seasons}")
 
-    def collect_all_data(self, force_refresh: bool = False) -> Dict[str, str]:
+    def collect_all_data(self, force_refresh: bool = False) -> dict[str, str]:
         """Collect all types of F1 data for the specified seasons.
 
         Args:
@@ -335,7 +334,7 @@ class F1DataCollector:
 
         return str(output_file)
 
-    def refresh_data(self) -> Dict[str, str]:
+    def refresh_data(self) -> dict[str, str]:
         """Refresh all collected data by re-downloading from the API.
 
         Returns:
@@ -344,7 +343,7 @@ class F1DataCollector:
         self.logger.info("Refreshing all F1 data")
         return self.collect_all_data(force_refresh=True)
 
-    def get_data_summary(self) -> Dict[str, any]:
+    def get_data_summary(self) -> dict[str, any]:
         """Get a summary of collected data files.
 
         Returns:
@@ -375,7 +374,7 @@ class F1DataCollector:
 
         return summary
 
-    def _save_to_csv(self, data: List[Dict], file_path: Path) -> None:
+    def _save_to_csv(self, data: list[dict], file_path: Path) -> None:
         """Save data to CSV file.
 
         Args:
@@ -392,7 +391,7 @@ class F1DataCollector:
             writer.writeheader()
             writer.writerows(data)
 
-    def _save_to_json(self, data: List[Dict], file_path: Path) -> None:
+    def _save_to_json(self, data: list[dict], file_path: Path) -> None:
         """Save data to JSON file.
 
         Args:
