@@ -1,14 +1,11 @@
 """Tests for the Ergast API client."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 from f1_predict.api.ergast import ErgastAPIClient
 from f1_predict.data.models import (
-    Circuit,
-    Constructor,
-    ConstructorStanding,
     Driver,
     DriverStanding,
     QualifyingResult,
@@ -41,14 +38,14 @@ class TestErgastAPIClient:
                     "Seasons": [
                         {
                             "season": "2023",
-                            "url": "http://en.wikipedia.org/wiki/2023_Formula_One_World_Championship"
+                            "url": "http://en.wikipedia.org/wiki/2023_Formula_One_World_Championship",
                         },
                         {
                             "season": "2022",
-                            "url": "http://en.wikipedia.org/wiki/2022_Formula_One_World_Championship"
-                        }
+                            "url": "http://en.wikipedia.org/wiki/2022_Formula_One_World_Championship",
+                        },
                     ]
-                }
+                },
             }
         }
 
@@ -79,14 +76,14 @@ class TestErgastAPIClient:
                                     "lat": "26.0325",
                                     "long": "50.5106",
                                     "locality": "Sakhir",
-                                    "country": "Bahrain"
-                                }
+                                    "country": "Bahrain",
+                                },
                             },
                             "date": "2023-03-05",
-                            "time": "15:00:00Z"
+                            "time": "15:00:00Z",
                         }
-                    ]
-                }
+                    ],
+                },
             }
         }
 
@@ -111,7 +108,7 @@ class TestErgastAPIClient:
                             "givenName": "Lewis",
                             "familyName": "Hamilton",
                             "dateOfBirth": "1985-01-07",
-                            "nationality": "British"
+                            "nationality": "British",
                         },
                         {
                             "driverId": "verstappen",
@@ -121,10 +118,10 @@ class TestErgastAPIClient:
                             "givenName": "Max",
                             "familyName": "Verstappen",
                             "dateOfBirth": "1997-09-30",
-                            "nationality": "Dutch"
-                        }
+                            "nationality": "Dutch",
+                        },
                     ]
-                }
+                },
             }
         }
 
@@ -156,8 +153,8 @@ class TestErgastAPIClient:
                                     "lat": "26.0325",
                                     "long": "50.5106",
                                     "locality": "Sakhir",
-                                    "country": "Bahrain"
-                                }
+                                    "country": "Bahrain",
+                                },
                             },
                             "date": "2023-03-05",
                             "time": "15:00:00Z",
@@ -175,26 +172,26 @@ class TestErgastAPIClient:
                                         "givenName": "Max",
                                         "familyName": "Verstappen",
                                         "dateOfBirth": "1997-09-30",
-                                        "nationality": "Dutch"
+                                        "nationality": "Dutch",
                                     },
                                     "constructor": {
                                         "constructorId": "red_bull",
                                         "url": "http://en.wikipedia.org/wiki/Red_Bull_Racing",
                                         "name": "Red Bull",
-                                        "nationality": "Austrian"
+                                        "nationality": "Austrian",
                                     },
                                     "grid": "1",
                                     "laps": "57",
                                     "status": "Finished",
                                     "time": {
                                         "millis": "5434567",
-                                        "time": "1:30:34.567"
-                                    }
+                                        "time": "1:30:34.567",
+                                    },
                                 }
-                            ]
+                            ],
                         }
-                    ]
-                }
+                    ],
+                },
             }
         }
 
@@ -209,7 +206,7 @@ class TestErgastAPIClient:
         client = ErgastAPIClient(base_url=custom_url)
         assert client.base_url == custom_url
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_seasons(self, mock_get, client, mock_seasons_response):
         """Test getting seasons."""
         mock_get.return_value = mock_seasons_response
@@ -223,16 +220,18 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("seasons.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_seasons_with_pagination(self, mock_get, client, mock_seasons_response):
         """Test getting seasons with pagination parameters."""
         mock_get.return_value = mock_seasons_response
 
         seasons = client.get_seasons(limit=10, offset=5)
 
-        mock_get.assert_called_once_with("seasons.json", params={"limit": 10, "offset": 5})
+        mock_get.assert_called_once_with(
+            "seasons.json", params={"limit": 10, "offset": 5}
+        )
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_races(self, mock_get, client, mock_races_response):
         """Test getting races."""
         mock_get.return_value = mock_races_response
@@ -247,7 +246,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("2023.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_races_specific_round(self, mock_get, client, mock_races_response):
         """Test getting a specific race."""
         mock_get.return_value = mock_races_response
@@ -256,7 +255,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("2023/1.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_current_season_races(self, mock_get, client, mock_races_response):
         """Test getting current season races."""
         mock_get.return_value = mock_races_response
@@ -265,7 +264,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("current.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_drivers(self, mock_get, client, mock_drivers_response):
         """Test getting drivers."""
         mock_get.return_value = mock_drivers_response
@@ -281,7 +280,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("drivers.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_drivers_for_season(self, mock_get, client, mock_drivers_response):
         """Test getting drivers for a specific season."""
         mock_get.return_value = mock_drivers_response
@@ -290,7 +289,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("2023/drivers.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_driver(self, mock_get, client):
         """Test getting a specific driver."""
         single_driver_response = {
@@ -305,7 +304,7 @@ class TestErgastAPIClient:
                             "givenName": "Lewis",
                             "familyName": "Hamilton",
                             "dateOfBirth": "1985-01-07",
-                            "nationality": "British"
+                            "nationality": "British",
                         }
                     ]
                 }
@@ -322,23 +321,17 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("drivers/hamilton.json")
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_driver_not_found(self, mock_get, client):
         """Test getting a driver that doesn't exist."""
-        empty_response = {
-            "MRData": {
-                "DriverTable": {
-                    "Drivers": []
-                }
-            }
-        }
+        empty_response = {"MRData": {"DriverTable": {"Drivers": []}}}
         mock_get.return_value = empty_response
 
         driver = client.get_driver("nonexistent")
 
         assert driver is None
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_race_results(self, mock_get, client, mock_results_response):
         """Test getting race results."""
         mock_get.return_value = mock_results_response
@@ -354,7 +347,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("2023/1/results.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_driver_standings(self, mock_get, client):
         """Test getting driver standings."""
         standings_response = {
@@ -379,20 +372,20 @@ class TestErgastAPIClient:
                                         "givenName": "Max",
                                         "familyName": "Verstappen",
                                         "dateOfBirth": "1997-09-30",
-                                        "nationality": "Dutch"
+                                        "nationality": "Dutch",
                                     },
                                     "Constructors": [
                                         {
                                             "constructorId": "red_bull",
                                             "url": "http://en.wikipedia.org/wiki/Red_Bull_Racing",
                                             "name": "Red Bull",
-                                            "nationality": "Austrian"
+                                            "nationality": "Austrian",
                                         }
-                                    ]
+                                    ],
                                 }
-                            ]
+                            ],
                         }
-                    ]
+                    ],
                 }
             }
         }
@@ -409,7 +402,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("2023/driverStandings.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_current_driver_standings(self, mock_get, client):
         """Test getting current driver standings."""
         mock_get.return_value = {"MRData": {"StandingsTable": {"StandingsLists": []}}}
@@ -418,7 +411,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("current/driverStandings.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_last_race_results(self, mock_get, client, mock_results_response):
         """Test getting last race results."""
         mock_get.return_value = mock_results_response
@@ -427,7 +420,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("2023/last/results.json", params={})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_search_drivers(self, mock_get, client, mock_drivers_response):
         """Test searching for drivers by name."""
         mock_get.return_value = mock_drivers_response
@@ -440,7 +433,7 @@ class TestErgastAPIClient:
 
         mock_get.assert_called_once_with("drivers.json", params={"limit": 1000})
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_search_drivers_by_code(self, mock_get, client, mock_drivers_response):
         """Test searching for drivers by code."""
         mock_get.return_value = mock_drivers_response
@@ -451,35 +444,27 @@ class TestErgastAPIClient:
         assert len(drivers) == 1
         assert drivers[0].driver_id == "verstappen"
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_empty_response_handling(self, mock_get, client):
         """Test handling of empty API responses."""
-        empty_response = {
-            "MRData": {
-                "SeasonTable": {
-                    "Seasons": []
-                }
-            }
-        }
+        empty_response = {"MRData": {"SeasonTable": {"Seasons": []}}}
         mock_get.return_value = empty_response
 
         seasons = client.get_seasons()
 
         assert seasons == []
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_malformed_response_handling(self, mock_get, client):
         """Test handling of malformed API responses."""
-        malformed_response = {
-            "invalid": "response"
-        }
+        malformed_response = {"invalid": "response"}
         mock_get.return_value = malformed_response
 
         seasons = client.get_seasons()
 
         assert seasons == []
 
-    @patch.object(ErgastAPIClient, 'get')
+    @patch.object(ErgastAPIClient, "get")
     def test_get_qualifying_results(self, mock_get, client):
         """Test getting qualifying results."""
         qualifying_response = {
@@ -503,21 +488,21 @@ class TestErgastAPIClient:
                                         "givenName": "Max",
                                         "familyName": "Verstappen",
                                         "dateOfBirth": "1997-09-30",
-                                        "nationality": "Dutch"
+                                        "nationality": "Dutch",
                                     },
                                     "constructor": {
                                         "constructorId": "red_bull",
                                         "url": "http://en.wikipedia.org/wiki/Red_Bull_Racing",
                                         "name": "Red Bull",
-                                        "nationality": "Austrian"
+                                        "nationality": "Austrian",
                                     },
                                     "Q1": "1:29.708",
                                     "Q2": "1:29.439",
-                                    "Q3": "1:29.708"
+                                    "Q3": "1:29.708",
                                 }
-                            ]
+                            ],
                         }
-                    ]
+                    ],
                 }
             }
         }

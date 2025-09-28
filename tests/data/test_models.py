@@ -1,6 +1,6 @@
 """Tests for data models."""
 
-from datetime import date, time
+from datetime import date
 
 import pytest
 from pydantic import ValidationError
@@ -13,7 +13,6 @@ from f1_predict.data.models import (
     QualifyingResult,
     Race,
     Result,
-    ResultTime,
     Session,
 )
 
@@ -23,12 +22,7 @@ class TestLocation:
 
     def test_location_valid(self):
         """Test valid location creation."""
-        location = Location(
-            lat=51.5074,
-            long=-0.1278,
-            locality="London",
-            country="UK"
-        )
+        location = Location(lat=51.5074, long=-0.1278, locality="London", country="UK")
         assert location.lat == 51.5074
         assert location.long == -0.1278
         assert location.locality == "London"
@@ -37,12 +31,7 @@ class TestLocation:
     def test_location_invalid_lat(self):
         """Test location with invalid latitude."""
         with pytest.raises(ValidationError):
-            Location(
-                lat="invalid",
-                long=-0.1278,
-                locality="London",
-                country="UK"
-            )
+            Location(lat="invalid", long=-0.1278, locality="London", country="UK")
 
 
 class TestCircuit:
@@ -50,17 +39,12 @@ class TestCircuit:
 
     def test_circuit_valid(self):
         """Test valid circuit creation."""
-        location = Location(
-            lat=51.5074,
-            long=-0.1278,
-            locality="London",
-            country="UK"
-        )
+        location = Location(lat=51.5074, long=-0.1278, locality="London", country="UK")
         circuit = Circuit(
             circuitId="silverstone",
             url="http://example.com",
             circuitName="Silverstone Circuit",
-            location=location
+            location=location,
         )
         assert circuit.circuit_id == "silverstone"
         assert circuit.circuit_name == "Silverstone Circuit"
@@ -76,8 +60,8 @@ class TestCircuit:
                 "lat": 43.7347,
                 "long": 7.4206,
                 "locality": "Monte Carlo",
-                "country": "Monaco"
-            }
+                "country": "Monaco",
+            },
         }
         circuit = Circuit.model_validate(circuit_data)
         assert circuit.circuit_id == "monaco"
@@ -97,7 +81,7 @@ class TestDriver:
             givenName="Lewis",
             familyName="Hamilton",
             dateOfBirth="1985-01-07",
-            nationality="British"
+            nationality="British",
         )
         assert driver.driver_id == "hamilton"
         assert driver.permanent_number == 44
@@ -115,7 +99,7 @@ class TestDriver:
             "givenName": "Max",
             "familyName": "Verstappen",
             "dateOfBirth": "1997-09-30",
-            "nationality": "Dutch"
+            "nationality": "Dutch",
         }
         driver = Driver.model_validate(driver_data)
         assert driver.date_of_birth == date(1997, 9, 30)
@@ -128,7 +112,7 @@ class TestDriver:
             "givenName": "Charles",
             "familyName": "Leclerc",
             "dateOfBirth": "1997-10-16",
-            "nationality": "Monégasque"
+            "nationality": "Monégasque",
         }
         driver = Driver.model_validate(driver_data)
         assert driver.permanent_number is None
@@ -144,7 +128,7 @@ class TestConstructor:
             constructorId="mercedes",
             url="http://example.com",
             name="Mercedes",
-            nationality="German"
+            nationality="German",
         )
         assert constructor.constructor_id == "mercedes"
         assert constructor.name == "Mercedes"
@@ -156,10 +140,7 @@ class TestSession:
 
     def test_session_with_date_and_time(self):
         """Test session with date and time."""
-        session = Session(
-            date="2023-07-07",
-            time="14:00:00Z"
-        )
+        session = Session(date="2023-07-07", time="14:00:00Z")
         assert session.date == date(2023, 7, 7)
         assert session.time is not None
 
@@ -171,10 +152,7 @@ class TestSession:
 
     def test_session_invalid_time_format(self):
         """Test session with invalid time format."""
-        session = Session(
-            date="2023-07-07",
-            time="invalid-time"
-        )
+        session = Session(date="2023-07-07", time="invalid-time")
         # Invalid time should be set to None
         assert session.time is None
 
@@ -192,8 +170,8 @@ class TestRace:
                 "lat": 52.0786,
                 "long": -1.0169,
                 "locality": "Silverstone",
-                "country": "UK"
-            }
+                "country": "UK",
+            },
         }
 
         race_data = {
@@ -203,7 +181,7 @@ class TestRace:
             "raceName": "British Grand Prix",
             "circuit": circuit_data,
             "date": "2023-07-09",
-            "time": "14:00:00Z"
+            "time": "14:00:00Z",
         }
 
         race = Race.model_validate(race_data)
@@ -224,8 +202,8 @@ class TestRace:
                 "lat": 43.7347,
                 "long": 7.4206,
                 "locality": "Monte Carlo",
-                "country": "Monaco"
-            }
+                "country": "Monaco",
+            },
         }
 
         race_data = {
@@ -235,14 +213,8 @@ class TestRace:
             "raceName": "Monaco Grand Prix",
             "circuit": circuit_data,
             "date": "2023-05-28",
-            "FirstPractice": {
-                "date": "2023-05-26",
-                "time": "13:30:00Z"
-            },
-            "Qualifying": {
-                "date": "2023-05-27",
-                "time": "16:00:00Z"
-            }
+            "FirstPractice": {"date": "2023-05-26", "time": "13:30:00Z"},
+            "Qualifying": {"date": "2023-05-27", "time": "16:00:00Z"},
         }
 
         race = Race.model_validate(race_data)
@@ -265,14 +237,14 @@ class TestResult:
             "givenName": "Lewis",
             "familyName": "Hamilton",
             "dateOfBirth": "1985-01-07",
-            "nationality": "British"
+            "nationality": "British",
         }
 
         constructor_data = {
             "constructorId": "mercedes",
             "url": "http://example.com",
             "name": "Mercedes",
-            "nationality": "German"
+            "nationality": "German",
         }
 
         result_data = {
@@ -284,7 +256,7 @@ class TestResult:
             "constructor": constructor_data,
             "grid": 1,
             "laps": 70,
-            "status": "Finished"
+            "status": "Finished",
         }
 
         result = Result.model_validate(result_data)
@@ -306,14 +278,14 @@ class TestResult:
             "givenName": "Max",
             "familyName": "Verstappen",
             "dateOfBirth": "1997-09-30",
-            "nationality": "Dutch"
+            "nationality": "Dutch",
         }
 
         constructor_data = {
             "constructorId": "red_bull",
             "url": "http://example.com",
             "name": "Red Bull",
-            "nationality": "Austrian"
+            "nationality": "Austrian",
         }
 
         result_data = {
@@ -326,10 +298,7 @@ class TestResult:
             "grid": 1,
             "laps": 70,
             "status": "Finished",
-            "time": {
-                "millis": 5434567,
-                "time": "1:30:34.567"
-            }
+            "time": {"millis": 5434567, "time": "1:30:34.567"},
         }
 
         result = Result.model_validate(result_data)
@@ -349,14 +318,14 @@ class TestQualifyingResult:
             "givenName": "Lewis",
             "familyName": "Hamilton",
             "dateOfBirth": "1985-01-07",
-            "nationality": "British"
+            "nationality": "British",
         }
 
         constructor_data = {
             "constructorId": "mercedes",
             "url": "http://example.com",
             "name": "Mercedes",
-            "nationality": "German"
+            "nationality": "German",
         }
 
         qualifying_data = {
@@ -366,7 +335,7 @@ class TestQualifyingResult:
             "constructor": constructor_data,
             "Q1": "1:29.123",
             "Q2": "1:28.456",
-            "Q3": "1:27.789"
+            "Q3": "1:27.789",
         }
 
         qualifying_result = QualifyingResult.model_validate(qualifying_data)
@@ -386,14 +355,14 @@ class TestQualifyingResult:
             "givenName": "Lando",
             "familyName": "Norris",
             "dateOfBirth": "1999-11-13",
-            "nationality": "British"
+            "nationality": "British",
         }
 
         constructor_data = {
             "constructorId": "mclaren",
             "url": "http://example.com",
             "name": "McLaren",
-            "nationality": "British"
+            "nationality": "British",
         }
 
         qualifying_data = {
@@ -401,7 +370,7 @@ class TestQualifyingResult:
             "position": 11,
             "driver": driver_data,
             "constructor": constructor_data,
-            "Q1": "1:30.456"
+            "Q1": "1:30.456",
             # Q2 and Q3 missing (eliminated in Q1)
         }
 
@@ -421,7 +390,7 @@ class TestModelValidation:
                 # Missing required fields
                 url="http://example.com",
                 givenName="Test",
-                nationality="Test"
+                nationality="Test",
             )
 
     def test_invalid_field_types(self):
@@ -431,7 +400,7 @@ class TestModelValidation:
                 lat="invalid_number",  # Should be float
                 long=0.0,
                 locality="Test",
-                country="Test"
+                country="Test",
             )
 
     def test_date_parsing_error(self):
@@ -443,5 +412,5 @@ class TestModelValidation:
                 givenName="Test",
                 familyName="Driver",
                 dateOfBirth="invalid-date",  # Invalid format
-                nationality="Test"
+                nationality="Test",
             )

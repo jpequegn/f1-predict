@@ -8,15 +8,12 @@ qualifying results, lap times, and pit stop data.
 import csv
 import json
 import logging
-import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
-import pandas as pd
 
 from f1_predict.api.ergast import ErgastAPIClient
-from f1_predict.data.models import QualifyingResult, Race, Result
 
 
 class F1DataCollector:
@@ -68,7 +65,9 @@ class F1DataCollector:
 
         # Collect qualifying results
         try:
-            qualifying_file = self.collect_qualifying_results(force_refresh=force_refresh)
+            qualifying_file = self.collect_qualifying_results(
+                force_refresh=force_refresh
+            )
             results["qualifying_results"] = f"Success: {qualifying_file}"
         except Exception as e:
             results["qualifying_results"] = f"Error: {str(e)}"
@@ -143,13 +142,19 @@ class F1DataCollector:
                                 "grid": result.grid,
                                 "laps": result.laps,
                                 "status": result.status,
-                                "time_millis": result.time.millis if result.time else None,
-                                "time_formatted": result.time.time if result.time else None,
+                                "time_millis": result.time.millis
+                                if result.time
+                                else None,
+                                "time_formatted": result.time.time
+                                if result.time
+                                else None,
                             }
                             all_results.append(race_result)
 
                     except Exception as e:
-                        self.logger.warning(f"Failed to get results for {season} round {race.round}: {e}")
+                        self.logger.warning(
+                            f"Failed to get results for {season} round {race.round}: {e}"
+                        )
                         continue
 
             except Exception as e:
@@ -195,7 +200,9 @@ class F1DataCollector:
                 for race in races:
                     # Get qualifying results for each race
                     try:
-                        qualifying_results = self.client.get_qualifying_results(season, race.round)
+                        qualifying_results = self.client.get_qualifying_results(
+                            season, race.round
+                        )
 
                         for result in qualifying_results:
                             qualifying_result = {
@@ -221,7 +228,9 @@ class F1DataCollector:
                             all_qualifying.append(qualifying_result)
 
                     except Exception as e:
-                        self.logger.warning(f"Failed to get qualifying for {season} round {race.round}: {e}")
+                        self.logger.warning(
+                            f"Failed to get qualifying for {season} round {race.round}: {e}"
+                        )
                         continue
 
             except Exception as e:
@@ -230,7 +239,9 @@ class F1DataCollector:
 
         # Save to CSV
         self._save_to_csv(all_qualifying, output_file)
-        self.logger.info(f"Saved {len(all_qualifying)} qualifying results to {output_file}")
+        self.logger.info(
+            f"Saved {len(all_qualifying)} qualifying results to {output_file}"
+        )
 
         # Also save as JSON
         json_file = self.raw_dir / "qualifying_results_2020_2024.json"
@@ -277,16 +288,36 @@ class F1DataCollector:
                         "date": race.date.isoformat(),
                         "time": race.time.isoformat() if race.time else None,
                         "url": race.url,
-                        "fp1_date": race.first_practice.date.isoformat() if race.first_practice else None,
-                        "fp1_time": race.first_practice.time.isoformat() if race.first_practice and race.first_practice.time else None,
-                        "fp2_date": race.second_practice.date.isoformat() if race.second_practice else None,
-                        "fp2_time": race.second_practice.time.isoformat() if race.second_practice and race.second_practice.time else None,
-                        "fp3_date": race.third_practice.date.isoformat() if race.third_practice else None,
-                        "fp3_time": race.third_practice.time.isoformat() if race.third_practice and race.third_practice.time else None,
-                        "qualifying_date": race.qualifying.date.isoformat() if race.qualifying else None,
-                        "qualifying_time": race.qualifying.time.isoformat() if race.qualifying and race.qualifying.time else None,
-                        "sprint_date": race.sprint.date.isoformat() if race.sprint else None,
-                        "sprint_time": race.sprint.time.isoformat() if race.sprint and race.sprint.time else None,
+                        "fp1_date": race.first_practice.date.isoformat()
+                        if race.first_practice
+                        else None,
+                        "fp1_time": race.first_practice.time.isoformat()
+                        if race.first_practice and race.first_practice.time
+                        else None,
+                        "fp2_date": race.second_practice.date.isoformat()
+                        if race.second_practice
+                        else None,
+                        "fp2_time": race.second_practice.time.isoformat()
+                        if race.second_practice and race.second_practice.time
+                        else None,
+                        "fp3_date": race.third_practice.date.isoformat()
+                        if race.third_practice
+                        else None,
+                        "fp3_time": race.third_practice.time.isoformat()
+                        if race.third_practice and race.third_practice.time
+                        else None,
+                        "qualifying_date": race.qualifying.date.isoformat()
+                        if race.qualifying
+                        else None,
+                        "qualifying_time": race.qualifying.time.isoformat()
+                        if race.qualifying and race.qualifying.time
+                        else None,
+                        "sprint_date": race.sprint.date.isoformat()
+                        if race.sprint
+                        else None,
+                        "sprint_time": race.sprint.time.isoformat()
+                        if race.sprint and race.sprint.time
+                        else None,
                     }
                     all_schedules.append(schedule)
 
@@ -323,7 +354,7 @@ class F1DataCollector:
             "data_directory": str(self.data_dir),
             "raw_files": {},
             "processed_files": {},
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
         }
 
         # Check raw files
@@ -331,7 +362,7 @@ class F1DataCollector:
             stat = file_path.stat()
             summary["raw_files"][file_path.name] = {
                 "size_bytes": stat.st_size,
-                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
             }
 
         # Check processed files
@@ -339,7 +370,7 @@ class F1DataCollector:
             stat = file_path.stat()
             summary["processed_files"][file_path.name] = {
                 "size_bytes": stat.st_size,
-                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
             }
 
         return summary
@@ -355,7 +386,7 @@ class F1DataCollector:
             self.logger.warning("No data to save to CSV")
             return
 
-        with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+        with open(file_path, "w", newline="", encoding="utf-8") as csvfile:
             fieldnames = data[0].keys()
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
@@ -368,7 +399,7 @@ class F1DataCollector:
             data: List of dictionaries to save
             file_path: Path to save the JSON file
         """
-        with open(file_path, 'w', encoding='utf-8') as jsonfile:
+        with open(file_path, "w", encoding="utf-8") as jsonfile:
             json.dump(data, jsonfile, indent=2, ensure_ascii=False)
 
     def __enter__(self):

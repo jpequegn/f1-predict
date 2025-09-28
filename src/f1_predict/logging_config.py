@@ -57,20 +57,15 @@ def _get_processors(log_format: str, enable_colors: bool) -> List[Processor]:
     processors: List[Processor] = [
         # Add timestamp
         structlog.processors.TimeStamper(fmt="ISO"),
-
         # Add logger name and level
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
-
         # Add positional arguments
         structlog.stdlib.PositionalArgumentsFormatter(),
-
         # Process stack info
         structlog.processors.StackInfoRenderer(),
-
         # Add exception info
         structlog.processors.format_exc_info,
-
         # Add custom context processors
         _add_process_info,
         _add_correlation_id,
@@ -78,15 +73,19 @@ def _get_processors(log_format: str, enable_colors: bool) -> List[Processor]:
 
     if log_format.lower() == "json":
         # JSON format for production/structured logging
-        processors.extend([
-            structlog.processors.dict_tracebacks,
-            structlog.processors.JSONRenderer(),
-        ])
+        processors.extend(
+            [
+                structlog.processors.dict_tracebacks,
+                structlog.processors.JSONRenderer(),
+            ]
+        )
     else:
         # Console format for development
-        processors.extend([
-            structlog.dev.ConsoleRenderer(colors=enable_colors),
-        ])
+        processors.extend(
+            [
+                structlog.dev.ConsoleRenderer(colors=enable_colors),
+            ]
+        )
 
     return processors
 
@@ -137,14 +136,18 @@ def _configure_third_party_loggers() -> None:
     logging.getLogger("optuna").setLevel(logging.WARNING)
 
 
-def _add_process_info(logger: Any, method_name: str, event_dict: EventDict) -> EventDict:
+def _add_process_info(
+    logger: Any, method_name: str, event_dict: EventDict
+) -> EventDict:
     """Add process information to log entries."""
     event_dict["process_id"] = os.getpid()
     event_dict["thread_id"] = None  # Could add threading.get_ident() if needed
     return event_dict
 
 
-def _add_correlation_id(logger: Any, method_name: str, event_dict: EventDict) -> EventDict:
+def _add_correlation_id(
+    logger: Any, method_name: str, event_dict: EventDict
+) -> EventDict:
     """Add correlation ID for request tracing."""
     # In a web application, this would typically come from request context
     # For now, we'll add a placeholder
@@ -272,8 +275,15 @@ def log_data_quality(
 def _is_sensitive_key(key: str) -> bool:
     """Check if a key contains sensitive information."""
     sensitive_patterns = [
-        "password", "token", "key", "secret", "credential",
-        "auth", "session", "cookie", "private"
+        "password",
+        "token",
+        "key",
+        "secret",
+        "credential",
+        "auth",
+        "session",
+        "cookie",
+        "private",
     ]
     key_lower = key.lower()
     return any(pattern in key_lower for pattern in sensitive_patterns)
@@ -299,7 +309,7 @@ def log_performance(logger: Optional[structlog.BoundLogger] = None):
                     func_logger,
                     func.__name__,
                     {"args_count": len(args), "kwargs_count": len(kwargs)},
-                    duration_ms
+                    duration_ms,
                 )
 
                 return result
@@ -310,9 +320,10 @@ def log_performance(logger: Optional[structlog.BoundLogger] = None):
                     function=func.__name__,
                     duration_ms=duration_ms,
                     error=str(e),
-                    error_type=type(e).__name__
+                    error_type=type(e).__name__,
                 )
                 raise
 
         return wrapper
+
     return decorator

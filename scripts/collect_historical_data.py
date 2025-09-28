@@ -41,11 +41,8 @@ def setup_logging(verbose: bool = False) -> None:
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
         level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler('data_collection.log')
-        ]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.StreamHandler(), logging.FileHandler("data_collection.log")],
     )
 
 
@@ -54,45 +51,45 @@ def main():
     parser = argparse.ArgumentParser(
         description="Collect historical F1 data from Ergast API (2020-2024)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__
+        epilog=__doc__,
     )
 
     # Data collection options
     parser.add_argument(
-        "--all", action="store_true", default=True,
-        help="Collect all types of data (default)"
+        "--all",
+        action="store_true",
+        default=True,
+        help="Collect all types of data (default)",
     )
     parser.add_argument(
-        "--race-results", action="store_true",
-        help="Collect race results only"
+        "--race-results", action="store_true", help="Collect race results only"
     )
     parser.add_argument(
-        "--qualifying", action="store_true",
-        help="Collect qualifying results only"
+        "--qualifying", action="store_true", help="Collect qualifying results only"
     )
     parser.add_argument(
-        "--schedules", action="store_true",
-        help="Collect race schedules only"
+        "--schedules", action="store_true", help="Collect race schedules only"
     )
 
     # Operation options
     parser.add_argument(
-        "--refresh", action="store_true",
-        help="Force refresh data (re-download even if files exist)"
+        "--refresh",
+        action="store_true",
+        help="Force refresh data (re-download even if files exist)",
     )
     parser.add_argument(
-        "--summary", action="store_true",
-        help="Show summary of existing data files"
+        "--summary", action="store_true", help="Show summary of existing data files"
     )
 
     # Configuration options
     parser.add_argument(
-        "--data-dir", type=str, default="data",
-        help="Directory for storing data files (default: data)"
+        "--data-dir",
+        type=str,
+        default="data",
+        help="Directory for storing data files (default: data)",
     )
     parser.add_argument(
-        "--verbose", "-v", action="store_true",
-        help="Enable verbose logging"
+        "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
 
     args = parser.parse_args()
@@ -113,13 +110,13 @@ def main():
             print(f"Last Updated: {summary['last_updated']}")
 
             print(f"\nRaw Files ({len(summary['raw_files'])} files):")
-            for filename, info in summary['raw_files'].items():
-                size_mb = info['size_bytes'] / (1024 * 1024)
+            for filename, info in summary["raw_files"].items():
+                size_mb = info["size_bytes"] / (1024 * 1024)
                 print(f"  {filename}: {size_mb:.2f} MB (modified: {info['modified']})")
 
             print(f"\nProcessed Files ({len(summary['processed_files'])} files):")
-            for filename, info in summary['processed_files'].items():
-                size_mb = info['size_bytes'] / (1024 * 1024)
+            for filename, info in summary["processed_files"].items():
+                size_mb = info["size_bytes"] / (1024 * 1024)
                 print(f"  {filename}: {size_mb:.2f} MB (modified: {info['modified']})")
 
             return
@@ -132,7 +129,9 @@ def main():
             if args.race_results:
                 logger.info("Collecting race results...")
                 try:
-                    race_file = collector.collect_race_results(force_refresh=args.refresh)
+                    race_file = collector.collect_race_results(
+                        force_refresh=args.refresh
+                    )
                     results["race_results"] = f"Success: {race_file}"
                     print(f"✓ Race results saved to: {race_file}")
                 except Exception as e:
@@ -142,7 +141,9 @@ def main():
             if args.qualifying:
                 logger.info("Collecting qualifying results...")
                 try:
-                    qualifying_file = collector.collect_qualifying_results(force_refresh=args.refresh)
+                    qualifying_file = collector.collect_qualifying_results(
+                        force_refresh=args.refresh
+                    )
                     results["qualifying_results"] = f"Success: {qualifying_file}"
                     print(f"✓ Qualifying results saved to: {qualifying_file}")
                 except Exception as e:
@@ -152,7 +153,9 @@ def main():
             if args.schedules:
                 logger.info("Collecting race schedules...")
                 try:
-                    schedule_file = collector.collect_race_schedules(force_refresh=args.refresh)
+                    schedule_file = collector.collect_race_schedules(
+                        force_refresh=args.refresh
+                    )
                     results["race_schedules"] = f"Success: {schedule_file}"
                     print(f"✓ Race schedules saved to: {schedule_file}")
                 except Exception as e:

@@ -3,7 +3,7 @@
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -28,12 +28,7 @@ def mock_client():
 @pytest.fixture
 def sample_location():
     """Create a sample location for testing."""
-    return Location(
-        lat=52.0786,
-        long=-1.0169,
-        locality="Silverstone",
-        country="UK"
-    )
+    return Location(lat=52.0786, long=-1.0169, locality="Silverstone", country="UK")
 
 
 @pytest.fixture
@@ -43,7 +38,7 @@ def sample_circuit(sample_location):
         circuit_id="silverstone",
         url="http://example.com",
         circuit_name="Silverstone Circuit",
-        location=sample_location
+        location=sample_location,
     )
 
 
@@ -58,7 +53,7 @@ def sample_driver():
         given_name="Lewis",
         family_name="Hamilton",
         date_of_birth="1985-01-07",
-        nationality="British"
+        nationality="British",
     )
 
 
@@ -69,7 +64,7 @@ def sample_constructor():
         constructor_id="mercedes",
         url="http://example.com",
         name="Mercedes",
-        nationality="German"
+        nationality="German",
     )
 
 
@@ -82,7 +77,7 @@ def sample_race(sample_circuit):
         url="http://example.com",
         race_name="British Grand Prix",
         circuit=sample_circuit,
-        date="2023-07-09"
+        date="2023-07-09",
     )
 
 
@@ -98,7 +93,7 @@ def sample_result(sample_driver, sample_constructor):
         constructor=sample_constructor,
         grid=1,
         laps=70,
-        status="Finished"
+        status="Finished",
     )
 
 
@@ -126,8 +121,10 @@ class TestF1DataCollector:
         assert collector.raw_dir == Path("data") / "raw"
         assert collector.processed_dir == Path("data") / "processed"
 
-    @patch('f1_predict.data.collector.ErgastAPIClient')
-    def test_collect_race_results(self, mock_client_class, temp_data_dir, sample_race, sample_result):
+    @patch("f1_predict.data.collector.ErgastAPIClient")
+    def test_collect_race_results(
+        self, mock_client_class, temp_data_dir, sample_race, sample_result
+    ):
         """Test race results collection."""
         # Setup mock client
         mock_client = Mock()
@@ -148,7 +145,7 @@ class TestF1DataCollector:
         assert "race_results_2020_2024.csv" in output_file
 
         # Verify CSV content
-        with open(output_file, 'r') as f:
+        with open(output_file, "r") as f:
             content = f.read()
             assert "season,round,race_name" in content
             assert "2023,1,British Grand Prix" in content
@@ -158,7 +155,7 @@ class TestF1DataCollector:
         json_file = Path(temp_data_dir) / "raw" / "race_results_2020_2024.json"
         assert json_file.exists()
 
-    @patch('f1_predict.data.collector.ErgastAPIClient')
+    @patch("f1_predict.data.collector.ErgastAPIClient")
     def test_collect_race_results_existing_file(self, mock_client_class, temp_data_dir):
         """Test that existing files are not overwritten unless force_refresh is True."""
         mock_client = Mock()
@@ -185,8 +182,10 @@ class TestF1DataCollector:
         # Should have called API
         mock_client.get_races.assert_called()
 
-    @patch('f1_predict.data.collector.ErgastAPIClient')
-    def test_collect_qualifying_results(self, mock_client_class, temp_data_dir, sample_race):
+    @patch("f1_predict.data.collector.ErgastAPIClient")
+    def test_collect_qualifying_results(
+        self, mock_client_class, temp_data_dir, sample_race
+    ):
         """Test qualifying results collection."""
         # Setup mock client
         mock_client = Mock()
@@ -202,14 +201,14 @@ class TestF1DataCollector:
             given_name="Lewis",
             family_name="Hamilton",
             date_of_birth="1985-01-07",
-            nationality="British"
+            nationality="British",
         )
 
         sample_constructor = Constructor(
             constructor_id="mercedes",
             url="http://example.com",
             name="Mercedes",
-            nationality="German"
+            nationality="German",
         )
 
         qualifying_result = QualifyingResult(
@@ -219,7 +218,7 @@ class TestF1DataCollector:
             constructor=sample_constructor,
             q1="1:29.123",
             q2="1:28.456",
-            q3="1:27.789"
+            q3="1:27.789",
         )
 
         # Mock API responses
@@ -237,14 +236,16 @@ class TestF1DataCollector:
         assert "qualifying_results_2020_2024.csv" in output_file
 
         # Verify CSV content
-        with open(output_file, 'r') as f:
+        with open(output_file, "r") as f:
             content = f.read()
             assert "season,round,race_name" in content
             assert "q1,q2,q3" in content
             assert "1:29.123,1:28.456,1:27.789" in content
 
-    @patch('f1_predict.data.collector.ErgastAPIClient')
-    def test_collect_race_schedules(self, mock_client_class, temp_data_dir, sample_race):
+    @patch("f1_predict.data.collector.ErgastAPIClient")
+    def test_collect_race_schedules(
+        self, mock_client_class, temp_data_dir, sample_race
+    ):
         """Test race schedules collection."""
         # Setup mock client
         mock_client = Mock()
@@ -264,13 +265,13 @@ class TestF1DataCollector:
         assert "race_schedules_2020_2024.csv" in output_file
 
         # Verify CSV content
-        with open(output_file, 'r') as f:
+        with open(output_file, "r") as f:
             content = f.read()
             assert "season,round,race_name" in content
             assert "circuit_id,circuit_name" in content
             assert "2023,1,British Grand Prix" in content
 
-    @patch('f1_predict.data.collector.ErgastAPIClient')
+    @patch("f1_predict.data.collector.ErgastAPIClient")
     def test_collect_all_data(self, mock_client_class, temp_data_dir):
         """Test collecting all data types."""
         # Setup mock client
@@ -284,7 +285,13 @@ class TestF1DataCollector:
         results = collector.collect_all_data()
 
         # Verify all data types are included in results
-        expected_keys = ["race_results", "qualifying_results", "race_schedules", "lap_times", "pit_stops"]
+        expected_keys = [
+            "race_results",
+            "qualifying_results",
+            "race_schedules",
+            "lap_times",
+            "pit_stops",
+        ]
         for key in expected_keys:
             assert key in results
 
@@ -292,7 +299,7 @@ class TestF1DataCollector:
         assert "Not implemented" in results["lap_times"]
         assert "Not implemented" in results["pit_stops"]
 
-    @patch('f1_predict.data.collector.ErgastAPIClient')
+    @patch("f1_predict.data.collector.ErgastAPIClient")
     def test_refresh_data(self, mock_client_class, temp_data_dir):
         """Test data refresh functionality."""
         mock_client = Mock()
@@ -302,7 +309,7 @@ class TestF1DataCollector:
         collector = F1DataCollector(data_dir=temp_data_dir)
 
         # Mock collect_all_data to verify force_refresh=True is passed
-        with patch.object(collector, 'collect_all_data') as mock_collect:
+        with patch.object(collector, "collect_all_data") as mock_collect:
             mock_collect.return_value = {"test": "result"}
 
             result = collector.refresh_data()
@@ -316,7 +323,9 @@ class TestF1DataCollector:
 
         # Create some test files
         (collector.raw_dir / "test_raw.csv").write_text("test raw data")
-        (collector.processed_dir / "test_processed.csv").write_text("test processed data")
+        (collector.processed_dir / "test_processed.csv").write_text(
+            "test processed data"
+        )
 
         # Get summary
         summary = collector.get_data_summary()
@@ -342,7 +351,7 @@ class TestF1DataCollector:
 
         test_data = [
             {"name": "Lewis", "team": "Mercedes", "points": 25},
-            {"name": "Max", "team": "Red Bull", "points": 18}
+            {"name": "Max", "team": "Red Bull", "points": 18},
         ]
 
         test_file = collector.raw_dir / "test.csv"
@@ -361,7 +370,7 @@ class TestF1DataCollector:
 
         test_data = [
             {"name": "Lewis", "team": "Mercedes", "points": 25},
-            {"name": "Max", "team": "Red Bull", "points": 18}
+            {"name": "Max", "team": "Red Bull", "points": 18},
         ]
 
         test_file = collector.raw_dir / "test.json"
@@ -369,7 +378,7 @@ class TestF1DataCollector:
 
         # Verify file was created and contains correct data
         assert test_file.exists()
-        with open(test_file, 'r') as f:
+        with open(test_file, "r") as f:
             loaded_data = json.load(f)
 
         assert loaded_data == test_data
@@ -384,7 +393,7 @@ class TestF1DataCollector:
         # Should not create file for empty data
         assert not test_file.exists()
 
-    @patch('f1_predict.data.collector.ErgastAPIClient')
+    @patch("f1_predict.data.collector.ErgastAPIClient")
     def test_api_error_handling(self, mock_client_class, temp_data_dir):
         """Test error handling during API calls."""
         # Setup mock client to raise errors
@@ -407,7 +416,7 @@ class TestF1DataCollector:
         """Test context manager functionality."""
         with F1DataCollector(data_dir=temp_data_dir) as collector:
             assert collector is not None
-            assert hasattr(collector, 'client')
+            assert hasattr(collector, "client")
 
         # Context manager should close client
         # Note: The actual client closing is mocked, so we just verify

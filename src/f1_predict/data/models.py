@@ -367,9 +367,7 @@ class ConstructorTable(BaseModel):
     """Constructor table response."""
 
     season: Optional[str] = None
-    constructors: List[Constructor] = Field(
-        default_factory=list, alias="Constructors"
-    )
+    constructors: List[Constructor] = Field(default_factory=list, alias="Constructors")
 
     class Config:
         """Pydantic configuration."""
