@@ -6,27 +6,19 @@ results, standings, drivers, constructors, and circuits.
 """
 
 import logging
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from f1_predict.api.base import BaseAPIClient
 from f1_predict.data.models import (
     Circuit,
-    CircuitResponse,
     Constructor,
-    ConstructorResponse,
     ConstructorStanding,
     Driver,
-    DriverResponse,
     DriverStanding,
-    QualifyingResponse,
     QualifyingResult,
     Race,
-    RaceResponse,
     Result,
-    ResultResponse,
     Season,
-    SeasonResponse,
-    StandingsResponse,
 )
 
 
@@ -67,7 +59,7 @@ class ErgastAPIClient(BaseAPIClient):
         self,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Season]:
+    ) -> list[Season]:
         """Get list of F1 seasons.
 
         Args:
@@ -97,7 +89,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Race]:
+    ) -> list[Race]:
         """Get races for a season or specific race.
 
         Args:
@@ -116,7 +108,9 @@ class ErgastAPIClient(BaseAPIClient):
         if round_number is not None:
             endpoint_parts.append(str(round_number))
 
-        endpoint = "/".join(endpoint_parts) + ".json" if endpoint_parts else "races.json"
+        endpoint = (
+            "/".join(endpoint_parts) + ".json" if endpoint_parts else "races.json"
+        )
 
         params = {}
         if limit is not None:
@@ -132,7 +126,7 @@ class ErgastAPIClient(BaseAPIClient):
 
         return []
 
-    def get_current_season_races(self) -> List[Race]:
+    def get_current_season_races(self) -> list[Race]:
         """Get races for the current season.
 
         Returns:
@@ -148,7 +142,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Union[int, str],
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """Get results for a specific race.
 
         Args:
@@ -174,7 +168,10 @@ class ErgastAPIClient(BaseAPIClient):
             race_table = response["MRData"].get("RaceTable", {})
             races = race_table.get("Races", [])
             if races:
-                return [Result.model_validate(result) for result in races[0].get("Results", [])]
+                return [
+                    Result.model_validate(result)
+                    for result in races[0].get("Results", [])
+                ]
 
         return []
 
@@ -184,7 +181,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """Get results for a specific driver.
 
         Args:
@@ -216,7 +213,12 @@ class ErgastAPIClient(BaseAPIClient):
             races = race_table.get("Races", [])
             results = []
             for race in races:
-                results.extend([Result.model_validate(result) for result in race.get("Results", [])])
+                results.extend(
+                    [
+                        Result.model_validate(result)
+                        for result in race.get("Results", [])
+                    ]
+                )
             return results
 
         return []
@@ -227,7 +229,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """Get results for a specific constructor.
 
         Args:
@@ -259,7 +261,12 @@ class ErgastAPIClient(BaseAPIClient):
             races = race_table.get("Races", [])
             results = []
             for race in races:
-                results.extend([Result.model_validate(result) for result in race.get("Results", [])])
+                results.extend(
+                    [
+                        Result.model_validate(result)
+                        for result in race.get("Results", [])
+                    ]
+                )
             return results
 
         return []
@@ -272,7 +279,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Union[int, str],
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[QualifyingResult]:
+    ) -> list[QualifyingResult]:
         """Get qualifying results for a specific race.
 
         Args:
@@ -299,7 +306,10 @@ class ErgastAPIClient(BaseAPIClient):
             races = race_table.get("Races", [])
             if races:
                 qualifying_results = races[0].get("QualifyingResults", [])
-                return [QualifyingResult.model_validate(result) for result in qualifying_results]
+                return [
+                    QualifyingResult.model_validate(result)
+                    for result in qualifying_results
+                ]
 
         return []
 
@@ -311,7 +321,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[DriverStanding]:
+    ) -> list[DriverStanding]:
         """Get driver championship standings.
 
         Args:
@@ -343,7 +353,10 @@ class ErgastAPIClient(BaseAPIClient):
             standings_lists = standings_table.get("StandingsLists", [])
             if standings_lists:
                 driver_standings = standings_lists[0].get("DriverStandings", [])
-                return [DriverStanding.model_validate(standing) for standing in driver_standings]
+                return [
+                    DriverStanding.model_validate(standing)
+                    for standing in driver_standings
+                ]
 
         return []
 
@@ -353,7 +366,7 @@ class ErgastAPIClient(BaseAPIClient):
         round_number: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[ConstructorStanding]:
+    ) -> list[ConstructorStanding]:
         """Get constructor championship standings.
 
         Args:
@@ -384,12 +397,17 @@ class ErgastAPIClient(BaseAPIClient):
             standings_table = response["MRData"].get("StandingsTable", {})
             standings_lists = standings_table.get("StandingsLists", [])
             if standings_lists:
-                constructor_standings = standings_lists[0].get("ConstructorStandings", [])
-                return [ConstructorStanding.model_validate(standing) for standing in constructor_standings]
+                constructor_standings = standings_lists[0].get(
+                    "ConstructorStandings", []
+                )
+                return [
+                    ConstructorStanding.model_validate(standing)
+                    for standing in constructor_standings
+                ]
 
         return []
 
-    def get_current_driver_standings(self) -> List[DriverStanding]:
+    def get_current_driver_standings(self) -> list[DriverStanding]:
         """Get current season driver standings.
 
         Returns:
@@ -397,7 +415,7 @@ class ErgastAPIClient(BaseAPIClient):
         """
         return self.get_driver_standings("current")
 
-    def get_current_constructor_standings(self) -> List[ConstructorStanding]:
+    def get_current_constructor_standings(self) -> list[ConstructorStanding]:
         """Get current season constructor standings.
 
         Returns:
@@ -412,7 +430,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Driver]:
+    ) -> list[Driver]:
         """Get list of drivers.
 
         Args:
@@ -468,7 +486,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Constructor]:
+    ) -> list[Constructor]:
         """Get list of constructors.
 
         Args:
@@ -495,8 +513,13 @@ class ErgastAPIClient(BaseAPIClient):
         response = self.get(endpoint, params=params)
 
         if isinstance(response, dict) and "MRData" in response:
-            constructors_data = response["MRData"].get("ConstructorTable", {}).get("Constructors", [])
-            return [Constructor.model_validate(constructor) for constructor in constructors_data]
+            constructors_data = (
+                response["MRData"].get("ConstructorTable", {}).get("Constructors", [])
+            )
+            return [
+                Constructor.model_validate(constructor)
+                for constructor in constructors_data
+            ]
 
         return []
 
@@ -513,7 +536,9 @@ class ErgastAPIClient(BaseAPIClient):
         response = self.get(endpoint)
 
         if isinstance(response, dict) and "MRData" in response:
-            constructors_data = response["MRData"].get("ConstructorTable", {}).get("Constructors", [])
+            constructors_data = (
+                response["MRData"].get("ConstructorTable", {}).get("Constructors", [])
+            )
             if constructors_data:
                 return Constructor.model_validate(constructors_data[0])
 
@@ -526,7 +551,7 @@ class ErgastAPIClient(BaseAPIClient):
         season: Optional[Union[int, str]] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
-    ) -> List[Circuit]:
+    ) -> list[Circuit]:
         """Get list of circuits.
 
         Args:
@@ -553,7 +578,9 @@ class ErgastAPIClient(BaseAPIClient):
         response = self.get(endpoint, params=params)
 
         if isinstance(response, dict) and "MRData" in response:
-            circuits_data = response["MRData"].get("CircuitTable", {}).get("Circuits", [])
+            circuits_data = (
+                response["MRData"].get("CircuitTable", {}).get("Circuits", [])
+            )
             return [Circuit.model_validate(circuit) for circuit in circuits_data]
 
         return []
@@ -571,7 +598,9 @@ class ErgastAPIClient(BaseAPIClient):
         response = self.get(endpoint)
 
         if isinstance(response, dict) and "MRData" in response:
-            circuits_data = response["MRData"].get("CircuitTable", {}).get("Circuits", [])
+            circuits_data = (
+                response["MRData"].get("CircuitTable", {}).get("Circuits", [])
+            )
             if circuits_data:
                 return Circuit.model_validate(circuits_data[0])
 
@@ -579,7 +608,9 @@ class ErgastAPIClient(BaseAPIClient):
 
     # Convenience methods
 
-    def get_last_race_results(self, season: Optional[Union[int, str]] = None) -> List[Result]:
+    def get_last_race_results(
+        self, season: Optional[Union[int, str]] = None
+    ) -> list[Result]:
         """Get results from the last completed race.
 
         Args:
@@ -607,7 +638,7 @@ class ErgastAPIClient(BaseAPIClient):
         # For now, return the first race as a placeholder
         return races[0] if races else None
 
-    def search_drivers(self, name: str) -> List[Driver]:
+    def search_drivers(self, name: str) -> list[Driver]:
         """Search for drivers by name.
 
         Args:
@@ -628,7 +659,7 @@ class ErgastAPIClient(BaseAPIClient):
             or (driver.code and name_lower in driver.code.lower())
         ]
 
-    def search_constructors(self, name: str) -> List[Constructor]:
+    def search_constructors(self, name: str) -> list[Constructor]:
         """Search for constructors by name.
 
         Args:
@@ -641,4 +672,8 @@ class ErgastAPIClient(BaseAPIClient):
         all_constructors = self.get_constructors(limit=1000)  # Get a large number
         name_lower = name.lower()
 
-        return [constructor for constructor in all_constructors if name_lower in constructor.name.lower()]
+        return [
+            constructor
+            for constructor in all_constructors
+            if name_lower in constructor.name.lower()
+        ]

@@ -3,11 +3,11 @@
 import json
 import logging
 import time
-from typing import Any, Dict, Optional, Type, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union
 from urllib.parse import urljoin
 
-import requests
 from pydantic import BaseModel, ValidationError
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -33,7 +33,9 @@ class RateLimiter:
         now = time.time()
 
         # Remove old requests outside the time window
-        self.requests = [req_time for req_time in self.requests if now - req_time < self.time_window]
+        self.requests = [
+            req_time for req_time in self.requests if now - req_time < self.time_window
+        ]
 
         # If we're at the limit, wait
         if len(self.requests) >= self.max_requests:
@@ -42,7 +44,11 @@ class RateLimiter:
                 time.sleep(sleep_time)
                 # Clean up old requests again
                 now = time.time()
-                self.requests = [req_time for req_time in self.requests if now - req_time < self.time_window]
+                self.requests = [
+                    req_time
+                    for req_time in self.requests
+                    if now - req_time < self.time_window
+                ]
 
         # Record this request
         self.requests.append(now)
@@ -51,7 +57,12 @@ class RateLimiter:
 class APIError(Exception):
     """Base API error."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None, response_data: Optional[Dict] = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+        response_data: Optional[dict] = None,
+    ):
         """Initialize API error.
 
         Args:
@@ -99,7 +110,7 @@ class BaseAPIClient:
         backoff_factor: float = 0.3,
         rate_limit_requests: int = 4,
         rate_limit_window: float = 1.0,
-        headers: Optional[Dict[str, str]] = None,
+        headers: Optional[dict[str, str]] = None,
     ):
         """Initialize the base API client.
 
@@ -147,8 +158,12 @@ class BaseAPIClient:
         self.session.headers.update(default_headers)
 
         self.logger.info(
-            "API client initialized: base_url=%s, timeout=%s, max_retries=%s, rate_limit=%s",
-            self.base_url, timeout, max_retries, f"{rate_limit_requests}/{rate_limit_window}s"
+            "API client initialized: base_url=%s, timeout=%s, max_retries=%s, "
+            "rate_limit=%s",
+            self.base_url,
+            timeout,
+            max_retries,
+            f"{rate_limit_requests}/{rate_limit_window}s",
         )
 
     def _build_url(self, endpoint: str) -> str:
@@ -162,7 +177,7 @@ class BaseAPIClient:
         """
         return urljoin(f"{self.base_url}/", endpoint.lstrip("/"))
 
-    def _handle_response(self, response: requests.Response) -> Dict[str, Any]:
+    def _handle_response(self, response: requests.Response) -> dict[str, Any]:
         """Handle API response and extract data.
 
         Args:
@@ -177,17 +192,25 @@ class BaseAPIClient:
         # Log response details
         self.logger.debug(
             "API response received: status_code=%d, url=%s",
-            response.status_code, response.url
+            response.status_code,
+            response.url,
         )
 
         # Handle different status codes
         if response.status_code == 200:
             try:
                 data = response.json()
-                self.logger.debug("Response parsed successfully: data_keys=%s", list(data.keys()) if isinstance(data, dict) else "non-dict")
+                self.logger.debug(
+                    "Response parsed successfully: data_keys=%s",
+                    list(data.keys()) if isinstance(data, dict) else "non-dict",
+                )
                 return data
             except json.JSONDecodeError as e:
-                self.logger.error("Failed to parse JSON response: %s (content: %s)", str(e), response.text[:500])
+                self.logger.error(
+                    "Failed to parse JSON response: %s (content: %s)",
+                    str(e),
+                    response.text[:500],
+                )
                 raise APIError(f"Invalid JSON response: {e}") from e
 
         elif response.status_code == 404:
@@ -199,20 +222,32 @@ class BaseAPIClient:
             raise APIRateLimitError("Rate limit exceeded", status_code=429)
 
         elif response.status_code >= 500:
-            self.logger.error("Server error: status_code=%d, url=%s", response.status_code, response.url)
-            raise APIServerError(f"Server error: {response.status_code}", status_code=response.status_code)
+            self.logger.error(
+                "Server error: status_code=%d, url=%s",
+                response.status_code,
+                response.url,
+            )
+            raise APIServerError(
+                f"Server error: {response.status_code}",
+                status_code=response.status_code,
+            )
 
         else:
-            self.logger.error("Unexpected status code: %d, url=%s", response.status_code, response.url)
-            raise APIError(f"Unexpected status code: {response.status_code}", status_code=response.status_code)
+            self.logger.error(
+                "Unexpected status code: %d, url=%s", response.status_code, response.url
+            )
+            raise APIError(
+                f"Unexpected status code: {response.status_code}",
+                status_code=response.status_code,
+            )
 
     def _make_request(
         self,
         method: str,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: Optional[dict[str, Any]] = None,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Make HTTP request with rate limiting and error handling.
 
         Args:
@@ -240,8 +275,7 @@ class BaseAPIClient:
         }
 
         self.logger.debug(
-            "Making API request: method=%s, url=%s, params=%s",
-            method, url, params
+            "Making API request: method=%s, url=%s, params=%s", method, url, params
         )
 
         try:
@@ -250,8 +284,12 @@ class BaseAPIClient:
             duration = time.time() - start_time
 
             self.logger.info(
-                "API request completed: method=%s, url=%s, status_code=%d, duration_ms=%.1f",
-                method, url, response.status_code, round(duration * 1000, 2)
+                "API request completed: method=%s, url=%s, status_code=%d, "
+                "duration_ms=%.1f",
+                method,
+                url,
+                response.status_code,
+                round(duration * 1000, 2),
             )
 
             return self._handle_response(response)
@@ -271,9 +309,9 @@ class BaseAPIClient:
     def get(
         self,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
-        model: Optional[Type[T]] = None,
-    ) -> Union[Dict[str, Any], T]:
+        params: Optional[dict[str, Any]] = None,
+        model: Optional[type[T]] = None,
+    ) -> Union[dict[str, Any], T]:
         """Make GET request.
 
         Args:
@@ -292,7 +330,9 @@ class BaseAPIClient:
             except ValidationError as e:
                 self.logger.error(
                     "Failed to parse response with model %s: %s (data_keys: %s)",
-                    model.__name__, str(e), list(data.keys()) if isinstance(data, dict) else "non-dict"
+                    model.__name__,
+                    str(e),
+                    list(data.keys()) if isinstance(data, dict) else "non-dict",
                 )
                 # Return raw data if model parsing fails
                 return data
@@ -302,10 +342,10 @@ class BaseAPIClient:
     def post(
         self,
         endpoint: str,
-        data: Optional[Dict[str, Any]] = None,
-        json_data: Optional[Dict[str, Any]] = None,
-        model: Optional[Type[T]] = None,
-    ) -> Union[Dict[str, Any], T]:
+        data: Optional[dict[str, Any]] = None,
+        json_data: Optional[dict[str, Any]] = None,
+        model: Optional[type[T]] = None,
+    ) -> Union[dict[str, Any], T]:
         """Make POST request.
 
         Args:
@@ -329,7 +369,9 @@ class BaseAPIClient:
             try:
                 return model.model_validate(response_data)
             except ValidationError as e:
-                self.logger.error("Failed to parse response with model %s: %s", model.__name__, str(e))
+                self.logger.error(
+                    "Failed to parse response with model %s: %s", model.__name__, str(e)
+                )
                 return response_data
 
         return response_data

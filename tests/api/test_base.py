@@ -2,11 +2,11 @@
 
 import json
 import time
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
+from pydantic import BaseModel
 import pytest
 import requests
-from pydantic import BaseModel
 
 from f1_predict.api.base import (
     APIError,
@@ -109,9 +109,12 @@ class TestBaseAPIClient:
         """Test URL building."""
         assert client._build_url("endpoint") == "https://api.example.com/endpoint"
         assert client._build_url("/endpoint") == "https://api.example.com/endpoint"
-        assert client._build_url("path/to/endpoint") == "https://api.example.com/path/to/endpoint"
+        assert (
+            client._build_url("path/to/endpoint")
+            == "https://api.example.com/path/to/endpoint"
+        )
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_successful_request(self, mock_request, client):
         """Test successful API request."""
         # Mock successful response
@@ -127,7 +130,7 @@ class TestBaseAPIClient:
         assert result == {"data": "test"}
         mock_request.assert_called_once()
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_with_model_parsing(self, mock_request, client):
         """Test request with Pydantic model parsing."""
         # Mock successful response
@@ -144,7 +147,7 @@ class TestBaseAPIClient:
         assert result.id == 1
         assert result.name == "test"
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_request_with_model_parsing_failure(self, mock_request, client):
         """Test request with model parsing failure returns raw data."""
         # Mock successful response with invalid data for model
@@ -160,7 +163,7 @@ class TestBaseAPIClient:
         # Should return raw data when model parsing fails
         assert result == {"invalid": "data"}
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_404_error(self, mock_request, client):
         """Test 404 error handling."""
         mock_response = Mock()
@@ -173,7 +176,7 @@ class TestBaseAPIClient:
 
         assert exc_info.value.status_code == 404
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_429_rate_limit_error(self, mock_request, client):
         """Test 429 rate limit error handling."""
         mock_response = Mock()
@@ -186,7 +189,7 @@ class TestBaseAPIClient:
 
         assert exc_info.value.status_code == 429
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_500_server_error(self, mock_request, client):
         """Test 500 server error handling."""
         mock_response = Mock()
@@ -199,7 +202,7 @@ class TestBaseAPIClient:
 
         assert exc_info.value.status_code == 500
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_json_decode_error(self, mock_request, client):
         """Test JSON decode error handling."""
         mock_response = Mock()
@@ -214,7 +217,7 @@ class TestBaseAPIClient:
 
         assert "Invalid JSON response" in str(exc_info.value)
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_timeout_error(self, mock_request, client):
         """Test timeout error handling."""
         mock_request.side_effect = requests.exceptions.Timeout("Request timeout")
@@ -222,17 +225,19 @@ class TestBaseAPIClient:
         with pytest.raises(APITimeoutError):
             client.get("test")
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_connection_error(self, mock_request, client):
         """Test connection error handling."""
-        mock_request.side_effect = requests.exceptions.ConnectionError("Connection failed")
+        mock_request.side_effect = requests.exceptions.ConnectionError(
+            "Connection failed"
+        )
 
         with pytest.raises(APIError) as exc_info:
             client.get("test")
 
         assert "Connection error" in str(exc_info.value)
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_post_request(self, mock_request, client):
         """Test POST request."""
         mock_response = Mock()
@@ -249,7 +254,7 @@ class TestBaseAPIClient:
         call_args = mock_request.call_args
         assert call_args[1]["json"] == {"name": "test"}
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_post_with_form_data(self, mock_request, client):
         """Test POST request with form data."""
         mock_response = Mock()
@@ -294,4 +299,6 @@ class TestBaseAPIClient:
 
         assert "Authorization" in client.session.headers
         assert client.session.headers["Authorization"] == "Bearer token123"
-        assert "User-Agent" in client.session.headers  # Default header should still be there
+        assert (
+            "User-Agent" in client.session.headers
+        )  # Default header should still be there

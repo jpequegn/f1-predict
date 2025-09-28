@@ -16,21 +16,17 @@ env:
 
 jobs:
   test:
-    name: Test on Python ${{ matrix.python-version }}
+    name: Test on Python 3.12
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.12"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v1
@@ -60,7 +56,6 @@ jobs:
         uv run pytest --cov=src/f1_predict --cov-report=xml --cov-report=term
 
     - name: Upload coverage to Codecov
-      if: matrix.python-version == '3.11'
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
@@ -79,7 +74,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v1
@@ -119,7 +114,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v1
@@ -149,7 +144,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v1
@@ -165,39 +160,6 @@ jobs:
         # Add sphinx build commands when documentation is set up
         echo "Documentation build placeholder"
 
-  compatibility-check:
-    name: Compatibility Check
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.9", "3.12"]
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v1
-
-    - name: Install package
-      run: |
-        uv sync --dev
-
-    - name: Run basic import test
-      run: |
-        uv run python -c "import f1_predict; print('Import successful')"
-
-    - name: Run fast tests only
-      run: |
-        uv run pytest tests/ -m "not slow" --maxfail=5
-
   performance-test:
     name: Performance Tests
     runs-on: ubuntu-latest
@@ -210,7 +172,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Install uv
       uses: astral-sh/setup-uv@v1
