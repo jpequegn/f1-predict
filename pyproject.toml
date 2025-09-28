@@ -11,7 +11,7 @@ authors = [
 description = "A machine learning project for predicting Formula 1 race outcomes"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -252,7 +252,7 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
