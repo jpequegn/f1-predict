@@ -35,10 +35,42 @@ f1-predict/
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- pip (Python package installer)
+- Python 3.9 or higher
+- [uv](https://docs.astral.sh/uv/) - Ultra-fast Python package installer (recommended)
+- Or pip as fallback
 
 ### Installation
+
+#### Option 1: Using uv (Recommended)
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/f1-predict.git
+cd f1-predict
+```
+
+2. Install uv (if not already installed):
+```bash
+# On macOS/Linux:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# On Windows:
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Or using pip:
+pip install uv
+```
+
+3. Install dependencies:
+```bash
+# Install all dependencies including development tools
+uv sync --dev --all-extras
+
+# For production only:
+uv sync
+```
+
+#### Option 2: Using pip (Traditional)
 
 1. Clone the repository:
 ```bash
@@ -48,35 +80,31 @@ cd f1-predict
 
 2. Create and activate a virtual environment:
 ```bash
-# Create virtual environment
 python -m venv venv
-
-# Activate virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-venv\Scripts\activate
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies:
 ```bash
-# Install production dependencies
-pip install -r requirements.txt
-
-# For development (includes testing and linting tools)
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 ```
 
 ### Development Setup
 
-1. Install the package in development mode:
+1. Set up pre-commit hooks:
 ```bash
-pip install -e .
+uv run pre-commit install
 ```
 
-2. Set up pre-commit hooks (optional but recommended):
+2. Set up environment variables:
 ```bash
-pre-commit install
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+3. Run tests to verify setup:
+```bash
+uv run pytest
 ```
 
 ## 📊 Data Sources
@@ -115,14 +143,20 @@ print(predictions)
 Run the test suite:
 
 ```bash
-# Run all tests
-pytest
+# Run all tests with coverage
+uv run pytest
 
-# Run with coverage report
-pytest --cov=src/f1_predict --cov-report=html
+# Run with detailed coverage report
+uv run pytest --cov-report=html
 
 # Run specific test file
-pytest tests/test_predictor.py
+uv run pytest tests/test_predictor.py
+
+# Run tests in parallel (faster)
+uv run pytest -n auto
+
+# Run only fast tests (skip slow integration tests)
+uv run pytest -m "not slow"
 ```
 
 ## 📈 Model Performance
@@ -147,18 +181,28 @@ Current model metrics (to be updated as models are developed):
 
 ### Code Style
 
-This project uses:
-- **Black** for code formatting
-- **isort** for import sorting
-- **flake8** for linting
-- **mypy** for type checking
+This project uses modern Python tooling:
+- **Ruff** for fast linting and formatting (replaces black, flake8, isort)
+- **MyPy** for type checking
+- **Bandit** for security linting
+- **Pre-commit hooks** for automated quality checks
 
 Run code quality checks:
 ```bash
-black src/ tests/
-isort src/ tests/
-flake8 src/ tests/
-mypy src/
+# Format code
+uv run ruff format .
+
+# Lint code (with auto-fix)
+uv run ruff check . --fix
+
+# Type checking
+uv run mypy src/
+
+# Security scanning
+uv run bandit -r src/
+
+# Run all checks
+uv run pre-commit run --all-files
 ```
 
 ## 📝 License

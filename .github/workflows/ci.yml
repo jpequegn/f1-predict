@@ -1,0 +1,258 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run tests daily at 6 AM UTC
+    - cron: '0 6 * * *'
+
+env:
+  # Disable pip cache directory creation
+  PIP_DISABLE_PIP_VERSION_CHECK: 1
+  PIP_NO_CACHE_DIR: 1
+
+jobs:
+  test:
+    name: Test on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev --all-extras
+
+    - name: Lint with Ruff
+      run: |
+        uv run ruff check .
+        uv run ruff format --check .
+
+    - name: Type check with MyPy
+      run: |
+        uv run mypy src/
+
+    - name: Security check with Bandit
+      run: |
+        uv run bandit -r src/ -c pyproject.toml
+
+    - name: Run tests with pytest
+      run: |
+        uv run pytest --cov=src/f1_predict --cov-report=xml --cov-report=term
+
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Run pre-commit hooks
+      uses: pre-commit/action@v3.0.0
+
+    - name: Check for large files
+      run: |
+        find . -type f -size +10M | grep -v ".git" | tee large_files.txt
+        if [ -s large_files.txt ]; then
+          echo "Large files detected:"
+          cat large_files.txt
+          exit 1
+        fi
+
+    - name: Check dependencies for security vulnerabilities
+      run: |
+        uv run pip-audit
+
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: [test, code-quality]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+
+    - name: Build package
+      run: |
+        uv build
+
+    - name: Check package metadata
+      run: |
+        uv run twine check dist/*
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: dist/
+
+  documentation:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+      with:
+        enable-cache: true
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Build documentation
+      run: |
+        # Add sphinx build commands when documentation is set up
+        echo "Documentation build placeholder"
+
+  compatibility-check:
+    name: Compatibility Check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.12"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+
+    - name: Install package
+      run: |
+        uv sync --dev
+
+    - name: Run basic import test
+      run: |
+        uv run python -c "import f1_predict; print('Import successful')"
+
+    - name: Run fast tests only
+      run: |
+        uv run pytest tests/ -m "not slow" --maxfail=5
+
+  performance-test:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'performance')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev --extra profiling
+
+    - name: Run performance tests
+      run: |
+        # Add performance benchmarks when available
+        echo "Performance tests placeholder"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  notify:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [test, code-quality, build]
+    if: failure() && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Notify on main branch failure
+      run: |
+        echo "Main branch CI failed - consider setting up notifications"
+        # Add Slack/email notifications here if desired
