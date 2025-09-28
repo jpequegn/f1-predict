@@ -6,9 +6,10 @@ Thank you for your interest in contributing to F1 Predict! This document provide
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.9 or higher
 - Git
-- pip (Python package installer)
+- [uv](https://docs.astral.sh/uv/) - Ultra-fast Python package installer (recommended)
+- Or pip as fallback
 
 ### Step 1: Fork and Clone
 
@@ -67,13 +68,22 @@ pyenv local f1-predict
 
 ### Step 3: Install Dependencies
 
+#### Using uv (Recommended)
+
+```bash
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
+# Or: pip install uv
+
+# Install all dependencies including development tools
+uv sync --dev --all-extras
+```
+
+#### Using pip (Traditional)
+
 ```bash
 # Install in development mode with all dependencies
 pip install -e ".[dev]"
-
-# Or install requirements separately
-pip install -r requirements-dev.txt
-pip install -e .
 ```
 
 ### Step 4: Verify Installation
@@ -90,23 +100,26 @@ pytest
 
 ### Code Quality Tools
 
-This project uses several tools to maintain code quality:
+This project uses modern Python tooling for code quality:
 
 ```bash
-# Format code with Black
-black src/ tests/
+# Format code with Ruff (replaces Black)
+uv run ruff format .
 
-# Sort imports with isort
-isort src/ tests/
+# Lint and fix issues with Ruff (replaces flake8 + isort)
+uv run ruff check . --fix
 
-# Lint with flake8
-flake8 src/ tests/
+# Type check with MyPy
+uv run mypy src/
 
-# Type check with mypy
-mypy src/
+# Security scanning with Bandit
+uv run bandit -r src/
 
 # Run all quality checks
-make lint  # if Makefile is available
+uv run pre-commit run --all-files
+
+# Or use Make commands
+make all-checks  # if Makefile is available
 ```
 
 ### Pre-commit Hooks (Recommended)
@@ -115,33 +128,50 @@ Set up pre-commit hooks to automatically run quality checks:
 
 ```bash
 # Install pre-commit hooks
-pre-commit install
+uv run pre-commit install
 
 # Run hooks manually
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 ### Running Tests
 
 ```bash
-# Run all tests
-pytest
+# Run all tests with coverage
+uv run pytest
 
-# Run with coverage
-pytest --cov=src/f1_predict
+# Run with detailed coverage report
+uv run pytest --cov-report=html
 
 # Run specific test file
-pytest tests/test_predictor.py
+uv run pytest tests/test_predictor.py
+
+# Run tests in parallel for speed
+uv run pytest -n auto
+
+# Run only fast tests (skip slow integration tests)
+uv run pytest -m "not slow"
 
 # Run tests with verbose output
-pytest -v
+uv run pytest -v
 ```
 
 ## 🔄 Virtual Environment Best Practices
 
-### Activating and Deactivating
+### Using uv (Automatic Environment Management)
 
-Always activate your virtual environment before working on the project:
+uv automatically manages virtual environments for you:
+
+```bash
+# uv automatically creates and uses project-specific virtual environments
+uv run python --version    # Runs in project environment
+uv run pytest             # Runs tests in project environment
+uv sync                    # Syncs dependencies in project environment
+```
+
+### Manual Virtual Environment (Traditional)
+
+If using pip, activate your virtual environment before working:
 
 ```bash
 # Activate
@@ -156,30 +186,51 @@ deactivate
 
 ### Managing Dependencies
 
-When adding new dependencies:
+#### Using uv (Recommended)
 
-1. Install the package in your activated virtual environment:
 ```bash
-pip install new-package
+# Add a production dependency
+uv add new-package
+
+# Add a development dependency
+uv add --dev new-package
+
+# Add an optional dependency
+uv add --optional mlops new-package
+
+# Update all dependencies
+uv sync --upgrade
+
+# Remove a dependency
+uv remove new-package
 ```
 
-2. Update requirements files:
-```bash
-# For production dependencies
-echo "new-package>=version" >> requirements.txt
+#### Using pip (Traditional)
 
-# For development dependencies
-echo "new-package>=version" >> requirements-dev.txt
-```
+When adding new dependencies manually:
 
-3. Generate exact versions (optional):
+1. Add to `pyproject.toml` under `[project.dependencies]` or `[project.optional-dependencies]`
+2. Install the updated dependencies:
 ```bash
-pip freeze > requirements-lock.txt
+pip install -e ".[dev]"
 ```
 
 ### Environment Verification
 
-Ensure you're in the correct environment:
+#### Using uv
+
+```bash
+# Check Python version
+uv run python --version
+
+# Check installed packages
+uv pip list
+
+# Verify project dependencies
+uv tree
+```
+
+#### Using traditional virtual environment
 
 ```bash
 # Check Python path
