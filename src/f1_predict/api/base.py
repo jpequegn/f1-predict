@@ -158,7 +158,8 @@ class BaseAPIClient:
         self.session.headers.update(default_headers)
 
         self.logger.info(
-            "API client initialized: base_url=%s, timeout=%s, max_retries=%s, rate_limit=%s",
+            "API client initialized: base_url=%s, timeout=%s, max_retries=%s, "
+            "rate_limit=%s",
             self.base_url,
             timeout,
             max_retries,
@@ -283,7 +284,8 @@ class BaseAPIClient:
             duration = time.time() - start_time
 
             self.logger.info(
-                "API request completed: method=%s, url=%s, status_code=%d, duration_ms=%.1f",
+                "API request completed: method=%s, url=%s, status_code=%d, "
+                "duration_ms=%.1f",
                 method,
                 url,
                 response.status_code,
