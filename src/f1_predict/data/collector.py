@@ -357,8 +357,6 @@ class F1DataCollector:
 
         if enable_cleaning:
             try:
-                from f1_predict.data.cleaning import DataCleaner
-
                 cleaning_results = self.clean_collected_data()
                 results["cleaning"] = cleaning_results
 

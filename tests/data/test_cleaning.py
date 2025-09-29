@@ -627,9 +627,6 @@ class TestDataCleaningIntegration:
         """Test data quality validation with real dirty data."""
         cleaned_data, report = cleaner.clean_race_results(dirty_race_results)
 
-        # Quality validation should fail with dirty data
-        quality_passed = cleaner.validate_data_quality(report)
-
         # With dirty data, quality should be lower
         assert report.quality_score < 95.0
 
@@ -661,10 +658,7 @@ class TestDataCleaningIntegration:
         # Step 1: Clean data
         cleaned_data, cleaning_report = cleaner.clean_race_results(dirty_race_results)
 
-        # Step 2: Validate cleaned data quality
-        quality_passed = cleaner.validate_data_quality(cleaning_report)
-
-        # Step 3: Run additional validation
+        # Step 2: Run additional validation
         validator = DataQualityValidator(strict_mode=False)
         validation_report = validator.validate_dataset(cleaned_data, "race_results")
 
