@@ -334,6 +334,184 @@ class F1DataCollector:
 
         return str(output_file)
 
+    def collect_and_clean_all_data(
+        self,
+        force_refresh: bool = False,
+        enable_cleaning: bool = True
+    ) -> dict[str, any]:
+        """Collect and optionally clean all types of F1 data.
+
+        Args:
+            force_refresh: If True, re-download data even if files exist
+            enable_cleaning: If True, clean the data after collection
+
+        Returns:
+            Dictionary with status of collection and cleaning operations
+        """
+        self.logger.info("Starting comprehensive F1 data collection and cleaning")
+
+        # First collect raw data
+        collection_results = self.collect_all_data(force_refresh=force_refresh)
+
+        results = {"collection": collection_results}
+
+        if enable_cleaning:
+            try:
+                from f1_predict.data.cleaning import DataCleaner
+
+                cleaning_results = self.clean_collected_data()
+                results["cleaning"] = cleaning_results
+
+            except ImportError:
+                self.logger.warning("Data cleaning module not available")
+                results["cleaning"] = {"error": "Cleaning module not available"}
+            except Exception as e:
+                self.logger.error(f"Data cleaning failed: {e}")
+                results["cleaning"] = {"error": str(e)}
+
+        return results
+
+    def clean_collected_data(self) -> dict[str, any]:
+        """Clean previously collected data.
+
+        Returns:
+            Dictionary with cleaning results for each data type
+        """
+        from f1_predict.data.cleaning import DataCleaner
+
+        self.logger.info("Starting data cleaning pipeline")
+
+        cleaner = DataCleaner(enable_logging=True)
+        results = {}
+
+        # Clean race results
+        race_results_file = self.raw_dir / "race_results_2020_2024.json"
+        if race_results_file.exists():
+            try:
+                with open(race_results_file) as f:
+                    race_data = json.load(f)
+
+                cleaned_data, report = cleaner.clean_race_results(race_data)
+
+                # Save cleaned data
+                cleaned_file = self.processed_dir / "race_results_cleaned.json"
+                self._save_to_json(cleaned_data, cleaned_file)
+
+                # Also save as CSV
+                csv_file = self.processed_dir / "race_results_cleaned.csv"
+                self._save_to_csv(cleaned_data, csv_file)
+
+                results["race_results"] = {
+                    "status": "success",
+                    "input_count": len(race_data),
+                    "output_count": len(cleaned_data),
+                    "quality_score": report.quality_score,
+                    "cleaned_file": str(cleaned_file),
+                    "cleaned_csv": str(csv_file),
+                    "quality_passed": cleaner.validate_data_quality(report)
+                }
+
+                self.logger.info(f"Race results cleaned: {len(cleaned_data)}/{len(race_data)} records (quality: {report.quality_score:.1f}%)")
+
+            except Exception as e:
+                results["race_results"] = {"status": "error", "message": str(e)}
+                self.logger.error(f"Failed to clean race results: {e}")
+        else:
+            results["race_results"] = {"status": "skipped", "message": "Raw data file not found"}
+
+        # Clean qualifying results
+        qualifying_file = self.raw_dir / "qualifying_results_2020_2024.json"
+        if qualifying_file.exists():
+            try:
+                with open(qualifying_file) as f:
+                    qualifying_data = json.load(f)
+
+                cleaned_data, report = cleaner.clean_qualifying_results(qualifying_data)
+
+                # Save cleaned data
+                cleaned_file = self.processed_dir / "qualifying_results_cleaned.json"
+                self._save_to_json(cleaned_data, cleaned_file)
+
+                # Also save as CSV
+                csv_file = self.processed_dir / "qualifying_results_cleaned.csv"
+                self._save_to_csv(cleaned_data, csv_file)
+
+                results["qualifying_results"] = {
+                    "status": "success",
+                    "input_count": len(qualifying_data),
+                    "output_count": len(cleaned_data),
+                    "quality_score": report.quality_score,
+                    "cleaned_file": str(cleaned_file),
+                    "cleaned_csv": str(csv_file),
+                    "quality_passed": cleaner.validate_data_quality(report)
+                }
+
+                self.logger.info(f"Qualifying results cleaned: {len(cleaned_data)}/{len(qualifying_data)} records (quality: {report.quality_score:.1f}%)")
+
+            except Exception as e:
+                results["qualifying_results"] = {"status": "error", "message": str(e)}
+                self.logger.error(f"Failed to clean qualifying results: {e}")
+        else:
+            results["qualifying_results"] = {"status": "skipped", "message": "Raw data file not found"}
+
+        # Clean race schedules
+        schedules_file = self.raw_dir / "race_schedules_2020_2024.json"
+        if schedules_file.exists():
+            try:
+                with open(schedules_file) as f:
+                    schedules_data = json.load(f)
+
+                cleaned_data, report = cleaner.clean_race_schedules(schedules_data)
+
+                # Save cleaned data
+                cleaned_file = self.processed_dir / "race_schedules_cleaned.json"
+                self._save_to_json(cleaned_data, cleaned_file)
+
+                # Also save as CSV
+                csv_file = self.processed_dir / "race_schedules_cleaned.csv"
+                self._save_to_csv(cleaned_data, csv_file)
+
+                results["race_schedules"] = {
+                    "status": "success",
+                    "input_count": len(schedules_data),
+                    "output_count": len(cleaned_data),
+                    "quality_score": report.quality_score,
+                    "cleaned_file": str(cleaned_file),
+                    "cleaned_csv": str(csv_file),
+                    "quality_passed": cleaner.validate_data_quality(report)
+                }
+
+                self.logger.info(f"Race schedules cleaned: {len(cleaned_data)}/{len(schedules_data)} records (quality: {report.quality_score:.1f}%)")
+
+            except Exception as e:
+                results["race_schedules"] = {"status": "error", "message": str(e)}
+                self.logger.error(f"Failed to clean race schedules: {e}")
+        else:
+            results["race_schedules"] = {"status": "skipped", "message": "Raw data file not found"}
+
+        # Generate cleaning summary
+        summary_file = self.processed_dir / "cleaning_summary.json"
+        try:
+            summary = {
+                "timestamp": datetime.now().isoformat(),
+                "cleaning_results": results,
+                "overall_status": "success" if all(
+                    r.get("status") == "success" for r in results.values()
+                    if r.get("status") != "skipped"
+                ) else "partial_success"
+            }
+
+            with open(summary_file, 'w') as f:
+                json.dump(summary, f, indent=2)
+
+            self.logger.info(f"Cleaning summary saved to: {summary_file}")
+
+        except Exception as e:
+            self.logger.warning(f"Failed to save cleaning summary: {e}")
+
+        self.logger.info("Data cleaning pipeline completed")
+        return results
+
     def refresh_data(self) -> dict[str, str]:
         """Refresh all collected data by re-downloading from the API.
 
