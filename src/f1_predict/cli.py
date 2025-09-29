@@ -5,7 +5,8 @@ import json
 import logging
 from pathlib import Path
 import sys
-from typing import Any, Dict
+import traceback
+from typing import Any
 
 from f1_predict import logging_config
 from f1_predict.data.cleaning import DataCleaner, DataQualityValidator
@@ -62,7 +63,6 @@ def collect_data(args: argparse.Namespace) -> None:
     except Exception as e:
         logger.error(f"Data collection failed: {e}")
         if args.verbose:
-            import traceback
             traceback.print_exc()
         sys.exit(1)
 
@@ -84,13 +84,13 @@ def clean_data(args: argparse.Namespace) -> None:
         # Process each data type
         results = {}
 
-        if args.type == "all" or args.type == "race-results":
+        if args.type in ("all", "race-results"):
             results.update(_clean_race_results(cleaner, data_dir, args))
 
-        if args.type == "all" or args.type == "qualifying":
+        if args.type in ("all", "qualifying"):
             results.update(_clean_qualifying_results(cleaner, data_dir, args))
 
-        if args.type == "all" or args.type == "schedules":
+        if args.type in ("all", "schedules"):
             results.update(_clean_schedules(cleaner, data_dir, args))
 
         # Generate summary report
@@ -101,12 +101,13 @@ def clean_data(args: argparse.Namespace) -> None:
     except Exception as e:
         logger.error(f"Data cleaning failed: {e}")
         if args.verbose:
-            import traceback
             traceback.print_exc()
         sys.exit(1)
 
 
-def _clean_race_results(cleaner: DataCleaner, data_dir: Path, args: argparse.Namespace) -> Dict[str, Any]:
+def _clean_race_results(
+    cleaner: DataCleaner, data_dir: Path, args: argparse.Namespace
+) -> dict[str, Any]:
     """Clean race results data."""
     logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ def _clean_race_results(cleaner: DataCleaner, data_dir: Path, args: argparse.Nam
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cleaned_file = output_dir / "race_results_cleaned.json"
-    with open(cleaned_file, 'w') as f:
+    with open(cleaned_file, "w") as f:
         json.dump(cleaned_data, f, indent=2, default=str)
 
     # Validate quality if requested
@@ -149,12 +150,14 @@ def _clean_race_results(cleaner: DataCleaner, data_dir: Path, args: argparse.Nam
             "input_count": len(race_data),
             "output_count": len(cleaned_data),
             "quality_report": report,
-            "quality_passed": quality_passed
+            "quality_passed": quality_passed,
         }
     }
 
 
-def _clean_qualifying_results(cleaner: DataCleaner, data_dir: Path, args: argparse.Namespace) -> Dict[str, Any]:
+def _clean_qualifying_results(
+    cleaner: DataCleaner, data_dir: Path, args: argparse.Namespace
+) -> dict[str, Any]:
     """Clean qualifying results data."""
     logger = logging.getLogger(__name__)
 
@@ -177,13 +180,15 @@ def _clean_qualifying_results(cleaner: DataCleaner, data_dir: Path, args: argpar
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cleaned_file = output_dir / "qualifying_results_cleaned.json"
-    with open(cleaned_file, 'w') as f:
+    with open(cleaned_file, "w") as f:
         json.dump(cleaned_data, f, indent=2, default=str)
 
     # Validate quality
     quality_passed = cleaner.validate_data_quality(report)
 
-    logger.info(f"Qualifying results cleaned: {len(cleaned_data)}/{len(qualifying_data)} records")
+    logger.info(
+        f"Qualifying results cleaned: {len(cleaned_data)}/{len(qualifying_data)} records"
+    )
     logger.info(f"Quality score: {report.quality_score:.1f}%")
     logger.info(f"Quality validation: {'PASSED' if quality_passed else 'FAILED'}")
 
@@ -197,12 +202,14 @@ def _clean_qualifying_results(cleaner: DataCleaner, data_dir: Path, args: argpar
             "input_count": len(qualifying_data),
             "output_count": len(cleaned_data),
             "quality_report": report,
-            "quality_passed": quality_passed
+            "quality_passed": quality_passed,
         }
     }
 
 
-def _clean_schedules(cleaner: DataCleaner, data_dir: Path, args: argparse.Namespace) -> Dict[str, Any]:
+def _clean_schedules(
+    cleaner: DataCleaner, data_dir: Path, args: argparse.Namespace
+) -> dict[str, Any]:
     """Clean race schedules data."""
     logger = logging.getLogger(__name__)
 
@@ -225,13 +232,15 @@ def _clean_schedules(cleaner: DataCleaner, data_dir: Path, args: argparse.Namesp
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cleaned_file = output_dir / "race_schedules_cleaned.json"
-    with open(cleaned_file, 'w') as f:
+    with open(cleaned_file, "w") as f:
         json.dump(cleaned_data, f, indent=2, default=str)
 
     # Validate quality
     quality_passed = cleaner.validate_data_quality(report)
 
-    logger.info(f"Race schedules cleaned: {len(cleaned_data)}/{len(schedules_data)} records")
+    logger.info(
+        f"Race schedules cleaned: {len(cleaned_data)}/{len(schedules_data)} records"
+    )
     logger.info(f"Quality score: {report.quality_score:.1f}%")
     logger.info(f"Quality validation: {'PASSED' if quality_passed else 'FAILED'}")
 
@@ -245,12 +254,12 @@ def _clean_schedules(cleaner: DataCleaner, data_dir: Path, args: argparse.Namesp
             "input_count": len(schedules_data),
             "output_count": len(cleaned_data),
             "quality_report": report,
-            "quality_passed": quality_passed
+            "quality_passed": quality_passed,
         }
     }
 
 
-def _generate_cleaning_summary(results: Dict[str, Any], output_dir: str) -> None:
+def _generate_cleaning_summary(results: dict[str, Any], output_dir: str) -> None:
     """Generate cleaning summary report."""
     logger = logging.getLogger(__name__)
 
@@ -261,7 +270,7 @@ def _generate_cleaning_summary(results: Dict[str, Any], output_dir: str) -> None
     summary = {
         "timestamp": str(logger.handlers[0].formatter.converter(None)),
         "total_datasets": len(results),
-        "datasets": {}
+        "datasets": {},
     }
 
     for dataset, info in results.items():
@@ -274,12 +283,13 @@ def _generate_cleaning_summary(results: Dict[str, Any], output_dir: str) -> None
             "validation_errors": len(info["quality_report"].validation_errors),
             "data_type_issues": len(info["quality_report"].data_type_issues),
             "standardization_changes": sum(
-                len(changes) for changes in info["quality_report"].standardization_changes.values()
-            )
+                len(changes)
+                for changes in info["quality_report"].standardization_changes.values()
+            ),
         }
 
     # Save summary
-    with open(summary_file, 'w') as f:
+    with open(summary_file, "w") as f:
         json.dump(summary, f, indent=2)
 
     logger.info(f"Cleaning summary saved to: {summary_file}")
@@ -301,13 +311,13 @@ def validate_data(args: argparse.Namespace) -> None:
         # Process each data type
         validation_results = {}
 
-        if args.type == "all" or args.type == "race-results":
+        if args.type in ("all", "race-results"):
             validation_results.update(_validate_race_results(validator, data_dir))
 
-        if args.type == "all" or args.type == "qualifying":
+        if args.type in ("all", "qualifying"):
             validation_results.update(_validate_qualifying_results(validator, data_dir))
 
-        if args.type == "all" or args.type == "schedules":
+        if args.type in ("all", "schedules"):
             validation_results.update(_validate_schedules(validator, data_dir))
 
         # Generate validation report
@@ -315,8 +325,7 @@ def validate_data(args: argparse.Namespace) -> None:
 
         # Check if any validation failed
         failed_validations = [
-            name for name, result in validation_results.items()
-            if not result["passed"]
+            name for name, result in validation_results.items() if not result["passed"]
         ]
 
         if failed_validations:
@@ -329,12 +338,13 @@ def validate_data(args: argparse.Namespace) -> None:
     except Exception as e:
         logger.error(f"Data validation failed: {e}")
         if args.verbose:
-            import traceback
             traceback.print_exc()
         sys.exit(1)
 
 
-def _validate_race_results(validator: DataQualityValidator, data_dir: Path) -> Dict[str, Any]:
+def _validate_race_results(
+    validator: DataQualityValidator, data_dir: Path
+) -> dict[str, Any]:
     """Validate race results data."""
     logger = logging.getLogger(__name__)
 
@@ -356,12 +366,14 @@ def _validate_race_results(validator: DataQualityValidator, data_dir: Path) -> D
         "race_results": {
             "passed": passed,
             "quality_score": report.quality_score,
-            "report": report
+            "report": report,
         }
     }
 
 
-def _validate_qualifying_results(validator: DataQualityValidator, data_dir: Path) -> Dict[str, Any]:
+def _validate_qualifying_results(
+    validator: DataQualityValidator, data_dir: Path
+) -> dict[str, Any]:
     """Validate qualifying results data."""
     logger = logging.getLogger(__name__)
 
@@ -383,12 +395,14 @@ def _validate_qualifying_results(validator: DataQualityValidator, data_dir: Path
         "qualifying_results": {
             "passed": passed,
             "quality_score": report.quality_score,
-            "report": report
+            "report": report,
         }
     }
 
 
-def _validate_schedules(validator: DataQualityValidator, data_dir: Path) -> Dict[str, Any]:
+def _validate_schedules(
+    validator: DataQualityValidator, data_dir: Path
+) -> dict[str, Any]:
     """Validate race schedules data."""
     logger = logging.getLogger(__name__)
 
@@ -410,12 +424,12 @@ def _validate_schedules(validator: DataQualityValidator, data_dir: Path) -> Dict
         "race_schedules": {
             "passed": passed,
             "quality_score": report.quality_score,
-            "report": report
+            "report": report,
         }
     }
 
 
-def _generate_validation_report(results: Dict[str, Any], output_dir: str) -> None:
+def _generate_validation_report(results: dict[str, Any], output_dir: str) -> None:
     """Generate validation report."""
     logger = logging.getLogger(__name__)
 
@@ -427,7 +441,7 @@ def _generate_validation_report(results: Dict[str, Any], output_dir: str) -> Non
     report_data = {
         "timestamp": str(logger.handlers[0].formatter.converter(None)),
         "overall_passed": all(result["passed"] for result in results.values()),
-        "datasets": {}
+        "datasets": {},
     }
 
     for dataset, info in results.items():
@@ -436,11 +450,11 @@ def _generate_validation_report(results: Dict[str, Any], output_dir: str) -> Non
             "quality_score": info["quality_score"],
             "validation_errors": len(info["report"].validation_errors),
             "missing_values": len(info["report"].missing_values),
-            "total_records": info["report"].total_records
+            "total_records": info["report"].total_records,
         }
 
     # Save report
-    with open(report_file, 'w') as f:
+    with open(report_file, "w") as f:
         json.dump(report_data, f, indent=2)
 
     logger.info(f"Validation report saved to: {report_file}")
@@ -469,13 +483,11 @@ Examples:
   # Collect and clean pipeline
   f1-predict collect --type all --data-dir data
   f1-predict clean --type all --data-dir data --output-dir data/processed
-        """
+        """,
     )
 
     parser.add_argument(
-        "-v", "--verbose",
-        action="store_true",
-        help="Enable verbose output"
+        "-v", "--verbose", action="store_true", help="Enable verbose output"
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -486,12 +498,10 @@ Examples:
         "--type",
         choices=["all", "race-results", "qualifying", "schedules"],
         default="all",
-        help="Type of data to collect (default: all)"
+        help="Type of data to collect (default: all)",
     )
     collect_parser.add_argument(
-        "--data-dir",
-        default="data",
-        help="Data directory (default: data)"
+        "--data-dir", default="data", help="Data directory (default: data)"
     )
     collect_parser.set_defaults(func=collect_data)
 
@@ -501,22 +511,18 @@ Examples:
         "--type",
         choices=["all", "race-results", "qualifying", "schedules"],
         default="all",
-        help="Type of data to clean (default: all)"
+        help="Type of data to clean (default: all)",
     )
     clean_parser.add_argument(
-        "--data-dir",
-        default="data",
-        help="Input data directory (default: data)"
+        "--data-dir", default="data", help="Input data directory (default: data)"
     )
     clean_parser.add_argument(
         "--output-dir",
         default="data/processed",
-        help="Output directory for cleaned data (default: data/processed)"
+        help="Output directory for cleaned data (default: data/processed)",
     )
     clean_parser.add_argument(
-        "--strict",
-        action="store_true",
-        help="Fail if data quality validation fails"
+        "--strict", action="store_true", help="Fail if data quality validation fails"
     )
     clean_parser.set_defaults(func=clean_data)
 
@@ -526,22 +532,18 @@ Examples:
         "--type",
         choices=["all", "race-results", "qualifying", "schedules"],
         default="all",
-        help="Type of data to validate (default: all)"
+        help="Type of data to validate (default: all)",
     )
     validate_parser.add_argument(
-        "--data-dir",
-        default="data",
-        help="Data directory to validate (default: data)"
+        "--data-dir", default="data", help="Data directory to validate (default: data)"
     )
     validate_parser.add_argument(
         "--output-dir",
         default="data/reports",
-        help="Output directory for validation reports (default: data/reports)"
+        help="Output directory for validation reports (default: data/reports)",
     )
     validate_parser.add_argument(
-        "--strict",
-        action="store_true",
-        help="Exit with error code if validation fails"
+        "--strict", action="store_true", help="Exit with error code if validation fails"
     )
     validate_parser.set_defaults(func=validate_data)
 
@@ -553,17 +555,15 @@ def main() -> None:
     parser = create_parser()
     args = parser.parse_args()
 
-    if not hasattr(args, 'func'):
+    if not hasattr(args, "func"):
         parser.print_help()
         sys.exit(1)
 
     try:
         args.func(args)
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user", file=sys.stderr)
         sys.exit(1)
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+    except Exception:
         sys.exit(1)
 
 

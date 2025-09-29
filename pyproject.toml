@@ -182,9 +182,14 @@ exclude = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*" = ["S101", "D", "PLR2004"]  # Allow assert and missing docstrings in tests
+"tests/**/*" = ["S101", "D", "PLR2004", "E501", "E712"]  # Allow assert, missing docstrings, magic values, long lines, and boolean comparisons in tests
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
-"scripts/**/*" = ["T20"]  # Allow print statements in scripts
+"scripts/**/*" = ["T20", "C901", "PLR0912", "PLR0915", "PLR2004"]  # Allow print statements and complexity in scripts
+"src/f1_predict/cli.py" = ["T201", "PLR2004", "E501", "PLR1714"]  # Allow prints, magic values, long lines, and comparison merging in CLI
+"src/f1_predict/data/cleaning.py" = ["E501", "F402", "ARG002", "DTZ007", "DTZ005", "PLR0911", "PLR2004", "SIM102"]  # Allow long lines, shadowed imports, unused args, naive datetime, many returns, magic values, nested ifs
+"src/f1_predict/data/collector.py" = ["E501", "PLR0915", "DTZ005", "DTZ006"]  # Allow long lines, many statements, and naive datetime
+"src/f1_predict/data/models.py" = ["DTZ007"]  # Allow naive datetime in models
+"src/f1_predict/logging_config.py" = ["ARG001"]  # Allow unused arguments in logging config
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

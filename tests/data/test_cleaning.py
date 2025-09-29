@@ -93,7 +93,7 @@ class TestDataCleaner:
             "laps": 66,
             "status": "Finished",
             "time_millis": None,  # Missing value
-            "time_formatted": "1:32:52.894"
+            "time_formatted": "1:32:52.894",
         }
 
     @pytest.fixture
@@ -111,7 +111,7 @@ class TestDataCleaner:
             "position": 2,
             "q1": "1:12.345",  # Valid lap time
             "q2": "1:11.987",
-            "q3": ""  # Empty string (missing)
+            "q3": "",  # Empty string (missing)
         }
 
     @pytest.fixture
@@ -130,18 +130,18 @@ class TestDataCleaner:
             "latitude": "41.57",  # String instead of float
             "longitude": "2.26111",
             "fp1_time": None,
-            "fp2_time": "13:00:00"
+            "fp2_time": "13:00:00",
         }
 
     def test_initialization(self, cleaner):
         """Test cleaner initialization."""
-        assert cleaner.enable_logging == False
-        assert hasattr(cleaner, 'driver_name_mappings')
-        assert hasattr(cleaner, 'constructor_name_mappings')
-        assert hasattr(cleaner, 'circuit_name_mappings')
-        assert cleaner.quality_thresholds['missing_data_percent'] == 5.0
-        assert cleaner.quality_thresholds['invalid_data_percent'] == 2.0
-        assert cleaner.quality_thresholds['min_quality_score'] == 85.0
+        assert cleaner.enable_logging is False
+        assert hasattr(cleaner, "driver_name_mappings")
+        assert hasattr(cleaner, "constructor_name_mappings")
+        assert hasattr(cleaner, "circuit_name_mappings")
+        assert cleaner.quality_thresholds["missing_data_percent"] == 5.0
+        assert cleaner.quality_thresholds["invalid_data_percent"] == 2.0
+        assert cleaner.quality_thresholds["min_quality_score"] == 85.0
 
     def test_clean_race_results_single(self, cleaner, sample_race_result):
         """Test cleaning a single race result."""
@@ -151,15 +151,15 @@ class TestDataCleaner:
         result = cleaned_data[0]
 
         # Check data type conversions
-        assert isinstance(result['season'], int)
-        assert result['season'] == 2024
-        assert isinstance(result['position'], int)
-        assert result['position'] == 1
-        assert isinstance(result['points'], float)
-        assert result['points'] == 25.0
+        assert isinstance(result["season"], int)
+        assert result["season"] == 2024
+        assert isinstance(result["position"], int)
+        assert result["position"] == 1
+        assert isinstance(result["points"], float)
+        assert result["points"] == 25.0
 
         # Check string formatting
-        assert result['race_name'] == 'Spanish Grand Prix'
+        assert result["race_name"] == "Spanish Grand Prix"
 
         # Check report
         assert report.total_records == 1
@@ -167,24 +167,26 @@ class TestDataCleaner:
 
     def test_clean_qualifying_results(self, cleaner, sample_qualifying_result):
         """Test cleaning qualifying results."""
-        cleaned_data, report = cleaner.clean_qualifying_results([sample_qualifying_result])
+        cleaned_data, report = cleaner.clean_qualifying_results(
+            [sample_qualifying_result]
+        )
 
         assert len(cleaned_data) == 1
         result = cleaned_data[0]
 
         # Check data type conversions
-        assert isinstance(result['round'], int)
-        assert result['round'] == 5
+        assert isinstance(result["round"], int)
+        assert result["round"] == 5
 
         # Check date conversion
-        assert result['date'] == '2024-06-22'
+        assert result["date"] == "2024-06-22"
 
         # Check Q3 missing value handling
-        assert result['q3'] is None
+        assert result["q3"] is None
 
         # Check report
         assert report.total_records == 1
-        assert 'qualifying_result.q3' in report.missing_values
+        assert "qualifying_result.q3" in report.missing_values
 
     def test_clean_race_schedules(self, cleaner, sample_race_schedule):
         """Test cleaning race schedules."""
@@ -194,10 +196,10 @@ class TestDataCleaner:
         schedule = cleaned_data[0]
 
         # Check coordinate conversions
-        assert isinstance(schedule['latitude'], float)
-        assert schedule['latitude'] == 41.57
-        assert isinstance(schedule['longitude'], float)
-        assert schedule['longitude'] == 2.26111
+        assert isinstance(schedule["latitude"], float)
+        assert schedule["latitude"] == 41.57
+        assert isinstance(schedule["longitude"], float)
+        assert schedule["longitude"] == 2.26111
 
         # Check report
         assert report.total_records == 1
@@ -210,7 +212,7 @@ class TestDataCleaner:
         report.missing_values = {"field1": 2}  # 2% missing
         report.validation_errors = ["error1"]  # 1% errors
 
-        assert cleaner.validate_data_quality(report) == True
+        assert cleaner.validate_data_quality(report) is True
 
     def test_validate_data_quality_fail(self, cleaner):
         """Test data quality validation with failing data."""
@@ -219,7 +221,7 @@ class TestDataCleaner:
         report.missing_values = {"field1": 10}  # 10% missing - above threshold
         report.validation_errors = ["error1", "error2", "error3"]  # 3% errors
 
-        assert cleaner.validate_data_quality(report) == False
+        assert cleaner.validate_data_quality(report) is False
 
     def test_handle_missing_values(self, cleaner):
         """Test handling of missing values."""
@@ -227,7 +229,7 @@ class TestDataCleaner:
             "position": "",
             "points": None,
             "status": "   ",  # Whitespace only
-            "driver_name": "Hamilton"
+            "driver_name": "Hamilton",
         }
         report = DataQualityReport()
 
@@ -351,11 +353,11 @@ class TestDataCleaner:
             "driver_id": "hamilton",
             "constructor_id": "mercedes",
             "position": 1,
-            "points": 25.0
+            "points": 25.0,
         }
         report = DataQualityReport()
 
-        assert cleaner._validate_race_result(data, report) == True
+        assert cleaner._validate_race_result(data, report) is True
         assert len(report.validation_errors) == 0
 
     def test_validate_race_result_invalid(self, cleaner):
@@ -364,19 +366,36 @@ class TestDataCleaner:
 
         # Missing required field
         data1 = {"season": 2024, "round": 5}
-        assert cleaner._validate_race_result(data1, report) == False
+        assert cleaner._validate_race_result(data1, report) is False
 
         # Invalid season
-        data2 = {"season": 1900, "round": 5, "driver_id": "test", "constructor_id": "test"}
-        assert cleaner._validate_race_result(data2, report) == False
+        data2 = {
+            "season": 1900,
+            "round": 5,
+            "driver_id": "test",
+            "constructor_id": "test",
+        }
+        assert cleaner._validate_race_result(data2, report) is False
 
         # Invalid position
-        data3 = {"season": 2024, "round": 5, "driver_id": "test", "constructor_id": "test", "position": 50}
-        assert cleaner._validate_race_result(data3, report) == False
+        data3 = {
+            "season": 2024,
+            "round": 5,
+            "driver_id": "test",
+            "constructor_id": "test",
+            "position": 50,
+        }
+        assert cleaner._validate_race_result(data3, report) is False
 
         # Invalid points
-        data4 = {"season": 2024, "round": 5, "driver_id": "test", "constructor_id": "test", "points": 100}
-        assert cleaner._validate_race_result(data4, report) == False
+        data4 = {
+            "season": 2024,
+            "round": 5,
+            "driver_id": "test",
+            "constructor_id": "test",
+            "points": 100,
+        }
+        assert cleaner._validate_race_result(data4, report) is False
 
     def test_calculate_quality_score(self, cleaner):
         """Test quality score calculation."""
@@ -409,17 +428,29 @@ class TestDataCleaner:
         """Test processing multiple records with various issues."""
         race_results = [
             {
-                "season": 2024, "round": 1, "driver_id": "hamilton",
-                "constructor_id": "mercedes", "position": 1, "points": 25
+                "season": 2024,
+                "round": 1,
+                "driver_id": "hamilton",
+                "constructor_id": "mercedes",
+                "position": 1,
+                "points": 25,
             },
             {
-                "season": "2024", "round": "2", "driver_id": "verstappen",
-                "constructor_id": "red_bull", "position": "1", "points": "25"
+                "season": "2024",
+                "round": "2",
+                "driver_id": "verstappen",
+                "constructor_id": "red_bull",
+                "position": "1",
+                "points": "25",
             },
             {
-                "season": 2024, "round": 3, "driver_id": "invalid",
-                "constructor_id": None, "position": 99, "points": -5  # Invalid data
-            }
+                "season": 2024,
+                "round": 3,
+                "driver_id": "invalid",
+                "constructor_id": None,
+                "position": 99,
+                "points": -5,  # Invalid data
+            },
         ]
 
         cleaned_data, report = cleaner.clean_race_results(race_results)
@@ -448,23 +479,32 @@ class TestDataQualityValidator:
         """Create sample dataset for validation."""
         return [
             {
-                "season": 2024, "round": 1, "driver_id": "hamilton",
-                "constructor_id": "mercedes", "position": 1
+                "season": 2024,
+                "round": 1,
+                "driver_id": "hamilton",
+                "constructor_id": "mercedes",
+                "position": 1,
             },
             {
-                "season": 2024, "round": 1, "driver_id": "verstappen",
-                "constructor_id": "red_bull", "position": 2
+                "season": 2024,
+                "round": 1,
+                "driver_id": "verstappen",
+                "constructor_id": "red_bull",
+                "position": 2,
             },
             {
-                "season": 2024, "round": 1, "driver_id": "hamilton",  # Duplicate
-                "constructor_id": "mercedes", "position": 3
-            }
+                "season": 2024,
+                "round": 1,
+                "driver_id": "hamilton",  # Duplicate
+                "constructor_id": "mercedes",
+                "position": 3,
+            },
         ]
 
     def test_initialization(self, validator):
         """Test validator initialization."""
-        assert validator.strict_mode == False
-        assert hasattr(validator, 'logger')
+        assert validator.strict_mode is False
+        assert hasattr(validator, "logger")
 
     def test_validate_empty_dataset(self, validator):
         """Test validation of empty dataset."""
@@ -479,14 +519,21 @@ class TestDataQualityValidator:
         report = validator.validate_dataset(sample_dataset, "race_results")
 
         # Should detect duplicate (same season, round, driver)
-        assert any("Duplicate race result" in error for error in report.validation_errors)
+        assert any(
+            "Duplicate race result" in error for error in report.validation_errors
+        )
 
     def test_check_consistency(self, validator):
         """Test data consistency checking."""
         # Dataset with duplicate positions in same race
         data = [
             {"season": 2024, "round": 1, "driver_id": "hamilton", "position": 1},
-            {"season": 2024, "round": 1, "driver_id": "verstappen", "position": 1},  # Duplicate position
+            {
+                "season": 2024,
+                "round": 1,
+                "driver_id": "verstappen",
+                "position": 1,
+            },  # Duplicate position
         ]
 
         report = DataQualityReport()
@@ -532,7 +579,7 @@ class TestDataQualityValidator:
         """Test validator in strict mode."""
         validator = DataQualityValidator(strict_mode=True)
 
-        assert validator.strict_mode == True
+        assert validator.strict_mode is True
         # Strict mode functionality would be implemented based on requirements
 
 
@@ -554,15 +601,15 @@ class TestDataCleaningIntegration:
 
         # Check that data types were converted
         for result in cleaned_data:
-            assert isinstance(result.get('season'), int)
-            assert isinstance(result.get('round'), int)
-            if result.get('position') is not None:
-                assert isinstance(result['position'], int)
-            if result.get('points') is not None:
-                assert isinstance(result['points'], float)
+            assert isinstance(result.get("season"), int)
+            assert isinstance(result.get("round"), int)
+            if result.get("position") is not None:
+                assert isinstance(result["position"], int)
+            if result.get("points") is not None:
+                assert isinstance(result["points"], float)
 
         # Check standardization occurred
-        standardized_names = report.standardization_changes.get('driver_names', {})
+        standardized_names = report.standardization_changes.get("driver_names", {})
         assert len(standardized_names) > 0  # Should have standardized some names
 
         # Quality score should reflect issues in data
@@ -570,9 +617,13 @@ class TestDataCleaningIntegration:
         assert len(report.data_type_issues) > 0  # Should detect type issues
         assert len(report.validation_errors) > 0  # Should detect validation errors
 
-    def test_clean_dirty_qualifying_results_integration(self, cleaner, dirty_qualifying_results):
+    def test_clean_dirty_qualifying_results_integration(
+        self, cleaner, dirty_qualifying_results
+    ):
         """Test cleaning dirty qualifying results with real data issues."""
-        cleaned_data, report = cleaner.clean_qualifying_results(dirty_qualifying_results)
+        cleaned_data, report = cleaner.clean_qualifying_results(
+            dirty_qualifying_results
+        )
 
         # Should process most records
         assert len(cleaned_data) >= 5
@@ -580,15 +631,15 @@ class TestDataCleaningIntegration:
 
         # Check data type conversions
         for result in cleaned_data:
-            assert isinstance(result.get('season'), int)
-            assert isinstance(result.get('round'), int)
-            if result.get('position') is not None:
-                assert isinstance(result['position'], int)
+            assert isinstance(result.get("season"), int)
+            assert isinstance(result.get("round"), int)
+            if result.get("position") is not None:
+                assert isinstance(result["position"], int)
 
         # Check qualifying time cleaning
         times_cleaned = 0
         for result in cleaned_data:
-            for field in ['q1', 'q2', 'q3']:
+            for field in ["q1", "q2", "q3"]:
                 if result.get(field) and result[field] != "none":
                     times_cleaned += 1
 
@@ -598,7 +649,9 @@ class TestDataCleaningIntegration:
         assert len(report.missing_values) > 0
         assert len(report.data_type_issues) > 0
 
-    def test_clean_dirty_race_schedules_integration(self, cleaner, dirty_race_schedules):
+    def test_clean_dirty_race_schedules_integration(
+        self, cleaner, dirty_race_schedules
+    ):
         """Test cleaning dirty race schedules with real data issues."""
         cleaned_data, report = cleaner.clean_race_schedules(dirty_race_schedules)
 
@@ -608,19 +661,23 @@ class TestDataCleaningIntegration:
 
         # Check coordinate conversions
         for schedule in cleaned_data:
-            if schedule.get('latitude') is not None:
-                assert isinstance(schedule['latitude'], float)
-            if schedule.get('longitude') is not None:
-                assert isinstance(schedule['longitude'], float)
+            if schedule.get("latitude") is not None:
+                assert isinstance(schedule["latitude"], float)
+            if schedule.get("longitude") is not None:
+                assert isinstance(schedule["longitude"], float)
 
         # Check date conversions
         for schedule in cleaned_data:
-            if schedule.get('date'):
+            if schedule.get("date"):
                 # Should be in ISO format or None
-                assert schedule['date'] is None or len(schedule['date']) == 10
+                assert schedule["date"] is None or len(schedule["date"]) == 10
 
         # Should detect validation errors for invalid coordinates
-        validation_errors = [err for err in report.validation_errors if "latitude" in err or "longitude" in err]
+        validation_errors = [
+            err
+            for err in report.validation_errors
+            if "latitude" in err or "longitude" in err
+        ]
         assert len(validation_errors) > 0
 
     def test_data_quality_validation_integration(self, cleaner, dirty_race_results):

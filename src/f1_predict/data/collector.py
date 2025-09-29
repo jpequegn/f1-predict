@@ -335,9 +335,7 @@ class F1DataCollector:
         return str(output_file)
 
     def collect_and_clean_all_data(
-        self,
-        force_refresh: bool = False,
-        enable_cleaning: bool = True
+        self, force_refresh: bool = False, enable_cleaning: bool = True
     ) -> dict[str, any]:
         """Collect and optionally clean all types of F1 data.
 
@@ -406,16 +404,21 @@ class F1DataCollector:
                     "quality_score": report.quality_score,
                     "cleaned_file": str(cleaned_file),
                     "cleaned_csv": str(csv_file),
-                    "quality_passed": cleaner.validate_data_quality(report)
+                    "quality_passed": cleaner.validate_data_quality(report),
                 }
 
-                self.logger.info(f"Race results cleaned: {len(cleaned_data)}/{len(race_data)} records (quality: {report.quality_score:.1f}%)")
+                self.logger.info(
+                    f"Race results cleaned: {len(cleaned_data)}/{len(race_data)} records (quality: {report.quality_score:.1f}%)"
+                )
 
             except Exception as e:
                 results["race_results"] = {"status": "error", "message": str(e)}
                 self.logger.error(f"Failed to clean race results: {e}")
         else:
-            results["race_results"] = {"status": "skipped", "message": "Raw data file not found"}
+            results["race_results"] = {
+                "status": "skipped",
+                "message": "Raw data file not found",
+            }
 
         # Clean qualifying results
         qualifying_file = self.raw_dir / "qualifying_results_2020_2024.json"
@@ -441,16 +444,21 @@ class F1DataCollector:
                     "quality_score": report.quality_score,
                     "cleaned_file": str(cleaned_file),
                     "cleaned_csv": str(csv_file),
-                    "quality_passed": cleaner.validate_data_quality(report)
+                    "quality_passed": cleaner.validate_data_quality(report),
                 }
 
-                self.logger.info(f"Qualifying results cleaned: {len(cleaned_data)}/{len(qualifying_data)} records (quality: {report.quality_score:.1f}%)")
+                self.logger.info(
+                    f"Qualifying results cleaned: {len(cleaned_data)}/{len(qualifying_data)} records (quality: {report.quality_score:.1f}%)"
+                )
 
             except Exception as e:
                 results["qualifying_results"] = {"status": "error", "message": str(e)}
                 self.logger.error(f"Failed to clean qualifying results: {e}")
         else:
-            results["qualifying_results"] = {"status": "skipped", "message": "Raw data file not found"}
+            results["qualifying_results"] = {
+                "status": "skipped",
+                "message": "Raw data file not found",
+            }
 
         # Clean race schedules
         schedules_file = self.raw_dir / "race_schedules_2020_2024.json"
@@ -476,16 +484,21 @@ class F1DataCollector:
                     "quality_score": report.quality_score,
                     "cleaned_file": str(cleaned_file),
                     "cleaned_csv": str(csv_file),
-                    "quality_passed": cleaner.validate_data_quality(report)
+                    "quality_passed": cleaner.validate_data_quality(report),
                 }
 
-                self.logger.info(f"Race schedules cleaned: {len(cleaned_data)}/{len(schedules_data)} records (quality: {report.quality_score:.1f}%)")
+                self.logger.info(
+                    f"Race schedules cleaned: {len(cleaned_data)}/{len(schedules_data)} records (quality: {report.quality_score:.1f}%)"
+                )
 
             except Exception as e:
                 results["race_schedules"] = {"status": "error", "message": str(e)}
                 self.logger.error(f"Failed to clean race schedules: {e}")
         else:
-            results["race_schedules"] = {"status": "skipped", "message": "Raw data file not found"}
+            results["race_schedules"] = {
+                "status": "skipped",
+                "message": "Raw data file not found",
+            }
 
         # Generate cleaning summary
         summary_file = self.processed_dir / "cleaning_summary.json"
@@ -493,13 +506,16 @@ class F1DataCollector:
             summary = {
                 "timestamp": datetime.now().isoformat(),
                 "cleaning_results": results,
-                "overall_status": "success" if all(
-                    r.get("status") == "success" for r in results.values()
+                "overall_status": "success"
+                if all(
+                    r.get("status") == "success"
+                    for r in results.values()
                     if r.get("status") != "skipped"
-                ) else "partial_success"
+                )
+                else "partial_success",
             }
 
-            with open(summary_file, 'w') as f:
+            with open(summary_file, "w") as f:
                 json.dump(summary, f, indent=2)
 
             self.logger.info(f"Cleaning summary saved to: {summary_file}")
