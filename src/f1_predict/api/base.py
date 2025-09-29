@@ -13,6 +13,12 @@ from urllib3.util.retry import Retry
 
 T = TypeVar("T", bound=BaseModel)
 
+# HTTP Status Code Constants
+HTTP_OK = 200
+HTTP_NOT_FOUND = 404
+HTTP_RATE_LIMIT = 429
+HTTP_SERVER_ERROR = 500
+
 
 class RateLimiter:
     """Simple rate limiter to prevent API abuse."""
@@ -197,7 +203,7 @@ class BaseAPIClient:
         )
 
         # Handle different status codes
-        if response.status_code == 200:
+        if response.status_code == HTTP_OK:
             try:
                 data = response.json()
                 self.logger.debug(
@@ -213,15 +219,15 @@ class BaseAPIClient:
                 )
                 raise APIError(f"Invalid JSON response: {e}") from e
 
-        elif response.status_code == 404:
+        elif response.status_code == HTTP_NOT_FOUND:
             self.logger.warning("Resource not found: %s", response.url)
-            raise APINotFoundError("Resource not found", status_code=404)
+            raise APINotFoundError("Resource not found", status_code=HTTP_NOT_FOUND)
 
-        elif response.status_code == 429:
+        elif response.status_code == HTTP_RATE_LIMIT:
             self.logger.warning("Rate limit exceeded: %s", response.url)
-            raise APIRateLimitError("Rate limit exceeded", status_code=429)
+            raise APIRateLimitError("Rate limit exceeded", status_code=HTTP_RATE_LIMIT)
 
-        elif response.status_code >= 500:
+        elif response.status_code >= HTTP_SERVER_ERROR:
             self.logger.error(
                 "Server error: status_code=%d, url=%s",
                 response.status_code,
