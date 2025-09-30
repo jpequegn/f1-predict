@@ -215,12 +215,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - The open-source community for excellent ML libraries
 - Contributors and maintainers of this project
 
-## 📞 Contact
-
-- **Author**: Julien Pequegnot
-- **Email**: [Your Email]
-- **GitHub**: [@jpequegn](https://github.com/jpequegn)
-
 ## 🗺️ Roadmap
 
 - [ ] Data collection and preprocessing pipeline
