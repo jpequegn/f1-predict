@@ -175,7 +175,10 @@ class TestTeamCircuitAnalyzer:
 
         # Should be sorted by avg_points descending
         if len(best_circuits) > 1:
-            assert best_circuits.iloc[0]["avg_points"] >= best_circuits.iloc[1]["avg_points"]
+            assert (
+                best_circuits.iloc[0]["avg_points"]
+                >= best_circuits.iloc[1]["avg_points"]
+            )
 
 
 class TestQualifyingAnalyzer:
@@ -275,7 +278,13 @@ class TestTeammateComparisonAnalyzer:
                         "round": ["1", "2", "3", "4", "5"],
                         "driver_id": ["russell"] * 5,
                         "constructor_id": ["mercedes"] * 5,
-                        "circuit_id": ["bahrain", "saudi", "australia", "japan", "china"],
+                        "circuit_id": [
+                            "bahrain",
+                            "saudi",
+                            "australia",
+                            "japan",
+                            "china",
+                        ],
                         "position": [5, 4, 6, 3, 4],
                         "points": [10.0, 12.0, 8.0, 15.0, 12.0],
                         "status_id": [1, 1, 1, 1, 1],
@@ -320,7 +329,9 @@ class TestTeammateComparisonAnalyzer:
         assert "common_qualifying" in metrics
 
         assert metrics["common_races"] == 5
-        assert metrics["driver1_wins"] + metrics["driver2_wins"] <= metrics["common_races"]
+        assert (
+            metrics["driver1_wins"] + metrics["driver2_wins"] <= metrics["common_races"]
+        )
 
     def test_compare_no_common_races(
         self, sample_race_results, sample_qualifying_results

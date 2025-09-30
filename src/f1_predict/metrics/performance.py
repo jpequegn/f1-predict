@@ -8,13 +8,17 @@ This module provides calculators for various performance metrics:
 - Head-to-head teammate comparisons
 """
 
-from datetime import datetime
 from typing import Optional
 
 import pandas as pd
 import structlog
 
 logger = structlog.get_logger(__name__)
+
+# F1-specific constants
+PODIUM_POSITION = 3  # Top 3 positions are considered podium finishes
+WIN_POSITION = 1  # Position 1 is a race win
+MIN_RACES_FOR_TREND = 3  # Minimum races needed for trend analysis
 
 
 class ChampionshipPointsAnalyzer:
@@ -63,6 +67,7 @@ class ChampionshipPointsAnalyzer:
                 "podium_rate": 0.0,
                 "win_rate": 0.0,
                 "consistency_score": 0.0,
+                "races_count": 0,
             }
 
         driver_results = driver_results.sort_values("date")
@@ -73,7 +78,7 @@ class ChampionshipPointsAnalyzer:
         races_count = len(driver_results)
 
         # Calculate trend (linear regression slope of points over time)
-        if races_count >= 3:
+        if races_count >= MIN_RACES_FOR_TREND:
             x = range(races_count)
             y = driver_results["points"].values
             # Simple linear regression
@@ -86,8 +91,8 @@ class ChampionshipPointsAnalyzer:
             points_trend = 0.0
 
         # Podium and win rates
-        podiums = (driver_results["position"] <= 3).sum()
-        wins = (driver_results["position"] == 1).sum()
+        podiums = (driver_results["position"] <= PODIUM_POSITION).sum()
+        wins = (driver_results["position"] == WIN_POSITION).sum()
         podium_rate = podiums / races_count
         win_rate = wins / races_count
 
@@ -113,9 +118,7 @@ class ChampionshipPointsAnalyzer:
 
         return metrics
 
-    def get_championship_standings(
-        self, race_results: pd.DataFrame
-    ) -> pd.DataFrame:
+    def get_championship_standings(self, race_results: pd.DataFrame) -> pd.DataFrame:
         """Get current championship standings.
 
         Args:
@@ -210,8 +213,8 @@ class TeamCircuitAnalyzer:
         avg_points = team_at_circuit["points"].mean()
 
         # Podium and win rates
-        podiums = (team_at_circuit["position"] <= 3).sum()
-        wins = (team_at_circuit["position"] == 1).sum()
+        podiums = (team_at_circuit["position"] <= PODIUM_POSITION).sum()
+        wins = (team_at_circuit["position"] == WIN_POSITION).sum()
         podium_rate = podiums / races_count
         win_rate = wins / races_count
 
@@ -492,8 +495,10 @@ class DNFReliabilityAnalyzer:
             }
 
         entries_count = len(team_results)
-        races_count = team_results["season"].astype(str) + team_results["round"].astype(str)
-        races_count = races_count.nunique()
+        race_ids = team_results["season"].astype(str) + team_results["round"].astype(
+            str
+        )
+        races_count = race_ids.nunique()
 
         # DNF analysis
         mechanical_dnf = team_results["status_id"].isin([3, 4, 5, 6])
@@ -518,7 +523,9 @@ class DNFReliabilityAnalyzer:
             "reliability_score": round(reliability_score, 2),
         }
 
-        self.logger.debug("team_reliability_analyzed", constructor_id=constructor_id, **metrics)
+        self.logger.debug(
+            "team_reliability_analyzed", constructor_id=constructor_id, **metrics
+        )
 
         return metrics
 
@@ -743,11 +750,15 @@ class PerformanceMetricsCalculator:
         report = {
             "driver_id": driver_id,
             "season": self.season or "all",
-            "championship_points": self.championship_analyzer.analyze_driver_points_trend(
-                race_results, driver_id
+            "championship_points": (
+                self.championship_analyzer.analyze_driver_points_trend(
+                    race_results, driver_id
+                )
             ),
-            "qualifying_performance": self.qualifying_analyzer.analyze_driver_qualifying(
-                race_results, qualifying_results, driver_id
+            "qualifying_performance": (
+                self.qualifying_analyzer.analyze_driver_qualifying(
+                    race_results, qualifying_results, driver_id
+                )
             ),
             "reliability": self.dnf_analyzer.analyze_driver_reliability(
                 race_results, driver_id

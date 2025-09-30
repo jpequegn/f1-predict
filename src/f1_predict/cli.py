@@ -12,6 +12,7 @@ from f1_predict import logging_config
 from f1_predict.data.cleaning import DataCleaner, DataQualityValidator
 from f1_predict.data.collector import F1DataCollector
 from f1_predict.features.engineering import FeatureEngineer
+from f1_predict.metrics.performance import PerformanceMetricsCalculator
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -545,6 +546,99 @@ def generate_features(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def calculate_metrics(args: argparse.Namespace) -> None:
+    """Calculate performance metrics for F1 data.
+
+    Args:
+        args: Command line arguments
+    """
+    setup_logging(args.verbose)
+    logger = logging.getLogger(__name__)
+
+    try:
+        import pandas as pd
+
+        # Load required data
+        data_dir = Path(args.data_dir)
+
+        # Load race results
+        race_results_file = data_dir / "processed" / "race_results_cleaned.json"
+        if not race_results_file.exists():
+            race_results_file = data_dir / "raw" / "race_results.json"
+            if not race_results_file.exists():
+                logger.error(
+                    "Race results not found. Run 'f1-predict collect' first."
+                )
+                sys.exit(1)
+
+        logger.info(f"Loading race results from {race_results_file}")
+        race_results = pd.read_json(race_results_file)
+
+        # Load qualifying results if needed
+        qualifying_results = None
+        if args.report_type in ("driver", "all"):
+            qualifying_file = data_dir / "processed" / "qualifying_results_cleaned.json"
+            if not qualifying_file.exists():
+                qualifying_file = data_dir / "raw" / "qualifying_results.json"
+                if not qualifying_file.exists():
+                    logger.warning(
+                        "Qualifying results not found. Some metrics will be unavailable."
+                    )
+                else:
+                    logger.info(f"Loading qualifying results from {qualifying_file}")
+                    qualifying_results = pd.read_json(qualifying_file)
+
+        # Initialize calculator
+        calculator = PerformanceMetricsCalculator(season=args.season)
+
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate reports based on type
+        if args.report_type == "driver" and args.driver_id:
+            logger.info(f"Generating driver report for {args.driver_id}")
+            report = calculator.generate_driver_report(
+                race_results, qualifying_results, args.driver_id
+            )
+            output_file = output_dir / f"driver_{args.driver_id}_metrics.json"
+
+        elif args.report_type == "team" and args.constructor_id:
+            logger.info(f"Generating team report for {args.constructor_id}")
+            report = calculator.generate_team_report(race_results, args.constructor_id)
+            output_file = output_dir / f"team_{args.constructor_id}_metrics.json"
+
+        elif args.report_type == "standings":
+            logger.info("Generating championship standings")
+            standings = calculator.championship_analyzer.get_championship_standings(
+                race_results
+            )
+            report = standings.to_dict(orient="records")
+            output_file = output_dir / "championship_standings.json"
+
+        else:
+            logger.error(
+                "Invalid report type or missing required arguments (--driver-id or --constructor-id)"
+            )
+            sys.exit(1)
+
+        # Save report
+        with open(output_file, "w") as f:
+            json.dump(report, f, indent=2, default=str)
+
+        logger.info(f"✓ Metrics report saved to: {output_file}")
+
+        # Print summary to console if verbose
+        if args.verbose:
+            logger.info("Report summary:")
+            logger.info(json.dumps(report, indent=2, default=str))
+
+    except Exception as e:
+        logger.error(f"Metrics calculation failed: {e}")
+        if args.verbose:
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create command line argument parser.
 
@@ -682,6 +776,51 @@ Examples:
         help="Output file format (default: csv)",
     )
     features_parser.set_defaults(func=generate_features)
+
+    # Metrics command
+    metrics_parser = subparsers.add_parser(
+        "metrics",
+        help="Calculate performance metrics for F1 data",
+        description="Calculate various performance metrics including championship points trends, "
+        "team circuit performance, qualifying analysis, DNF rates, and teammate comparisons.",
+    )
+    metrics_parser.add_argument(
+        "--report-type",
+        choices=["driver", "team", "standings"],
+        required=True,
+        help="Type of report to generate: driver, team, or championship standings",
+    )
+    metrics_parser.add_argument(
+        "--driver-id",
+        help="Driver ID for driver reports (required when report-type=driver)",
+    )
+    metrics_parser.add_argument(
+        "--constructor-id",
+        help="Constructor ID for team reports (required when report-type=team)",
+    )
+    metrics_parser.add_argument(
+        "--season",
+        help="Filter metrics for specific season (optional, e.g., '2024')",
+    )
+    metrics_parser.add_argument(
+        "--data-dir",
+        type=str,
+        default="data",
+        help="Directory containing data files (default: data)",
+    )
+    metrics_parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="data/metrics",
+        help="Output directory for metrics reports (default: data/metrics)",
+    )
+    metrics_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output with detailed progress information",
+    )
+    metrics_parser.set_defaults(func=calculate_metrics)
 
     return parser
 
