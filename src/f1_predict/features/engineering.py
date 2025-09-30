@@ -10,7 +10,7 @@ This module provides feature calculators for various aspects of F1 racing:
 
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pandas as pd
 import structlog
@@ -69,12 +69,15 @@ class DriverFormCalculator:
         # Calculate weighted position score (lower position = better)
         positions = driver_races["position"].values
         weights = self._calculate_recency_weights(len(positions))
+        weights_array = pd.Series(weights)
 
         # Convert positions to scores (1st = 100, 20th = 0)
         position_scores = 100 * (1 - (positions - 1) / 20)
-        position_scores = position_scores.clip(0, 100)
+        position_scores = pd.Series(position_scores).clip(0, 100)
 
-        weighted_position_score = (position_scores * weights).sum() / weights.sum()
+        weighted_position_score = (
+            position_scores * weights_array
+        ).sum() / weights_array.sum()
 
         # Calculate consistency penalty (higher std = lower consistency)
         consistency_penalty = positions.std() * 2  # Scale to 0-40 range
@@ -122,7 +125,7 @@ class DriverFormCalculator:
 
         return pd.DataFrame(form_scores)
 
-    def _calculate_recency_weights(self, n: int) -> List[float]:
+    def _calculate_recency_weights(self, n: int) -> list[float]:
         """Calculate exponential recency weights."""
         return [self.recency_weight**i for i in range(n - 1, -1, -1)]
 
@@ -151,7 +154,7 @@ class TeamReliabilityCalculator:
         race_results: pd.DataFrame,
         constructor_id: str,
         up_to_date: Optional[datetime] = None,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Calculate reliability metrics for a team.
 
         Args:
@@ -269,7 +272,7 @@ class TrackPerformanceCalculator:
         driver_id: str,
         circuit_id: str,
         up_to_date: Optional[datetime] = None,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Calculate driver performance at a specific circuit.
 
         Args:
@@ -306,7 +309,7 @@ class TrackPerformanceCalculator:
         position_score = 100 * (1 - (avg_position - 1) / 20)
         points_score = (avg_points / 25) * 100  # 25 points = perfect score
 
-        track_performance_score = (position_score * 0.6 + points_score * 0.4)
+        track_performance_score = position_score * 0.6 + points_score * 0.4
 
         metrics = {
             "avg_position": round(avg_position, 2),
@@ -379,7 +382,7 @@ class QualifyingRaceGapCalculator:
         qualifying_results: pd.DataFrame,
         driver_id: str,
         up_to_date: Optional[datetime] = None,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Calculate qualifying vs race performance gap.
 
         Args:
@@ -577,10 +580,10 @@ class FeatureEngineer:
             race_results, up_to_date
         )
 
-        # Calculate team reliability
-        reliability_features = self.team_reliability.calculate_reliability_features(
-            race_results, up_to_date
-        )
+        # Calculate team reliability (currently not included in final features)
+        # reliability_features = self.team_reliability.calculate_reliability_features(
+        #     race_results, up_to_date
+        # )
 
         # Calculate quali-race gap
         gap_features = self.quali_race_gap.calculate_gap_features(
@@ -595,9 +598,9 @@ class FeatureEngineer:
             track_features = self.track_performance.calculate_track_features(
                 race_results, circuit_id, up_to_date
             )
-            features = features.merge(
-                track_features, on="driver_id", how="left"
-            ).drop(columns=["circuit_id"], errors="ignore")
+            features = features.merge(track_features, on="driver_id", how="left").drop(
+                columns=["circuit_id"], errors="ignore"
+            )
 
         # Add weather features (placeholder)
         weather_features = self.weather_features.calculate_weather_features(

@@ -1,7 +1,6 @@
 """Tests for feature engineering calculators."""
 
 from datetime import datetime
-from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -100,9 +99,7 @@ class TestDriverFormCalculator:
     def test_form_score_with_limited_data(self, sample_race_results):
         """Test form score with limited race data."""
         calculator = DriverFormCalculator(window_size=10)  # More than available
-        score = calculator.calculate_form_score(
-            sample_race_results.head(2), "hamilton"
-        )
+        score = calculator.calculate_form_score(sample_race_results.head(2), "hamilton")
 
         assert 0 <= score <= 100
 
@@ -237,9 +234,7 @@ class TestTrackPerformanceCalculator:
     def test_calculate_track_features(self, sample_race_results):
         """Test calculating track features for all drivers."""
         calculator = TrackPerformanceCalculator(min_races=1)
-        features = calculator.calculate_track_features(
-            sample_race_results, "bahrain"
-        )
+        features = calculator.calculate_track_features(sample_race_results, "bahrain")
 
         assert len(features) == 2  # hamilton and verstappen
         assert "driver_id" in features.columns
@@ -315,9 +310,7 @@ class TestWeatherFeatureCalculator:
 class TestFeatureEngineer:
     """Tests for FeatureEngineer orchestrator."""
 
-    def test_generate_features(
-        self, sample_race_results, sample_qualifying_results
-    ):
+    def test_generate_features(self, sample_race_results, sample_qualifying_results):
         """Test complete feature generation."""
         engineer = FeatureEngineer()
         features = engineer.generate_features(
