@@ -6,14 +6,14 @@ This module provides a LightGBM classifier for predicting:
 - Race win probability
 """
 
-import pickle
 from pathlib import Path
+import pickle
 
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
-import structlog
 from sklearn.preprocessing import StandardScaler
+import structlog
 
 logger = structlog.get_logger(__name__)
 
@@ -196,7 +196,6 @@ class LightGBMRacePredictor:
         }
 
         # Train model
-        evals_result: dict[str, dict[str, list[float]]] = {}
         callbacks = []
         if self.early_stopping_rounds and eval_set is not None:
             callbacks.append(lgb.early_stopping(self.early_stopping_rounds))

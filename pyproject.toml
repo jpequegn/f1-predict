@@ -191,6 +191,7 @@ exclude = [
 "src/f1_predict/data/collector.py" = ["E501", "PLR0915", "DTZ005", "DTZ006"]  # Allow long lines, many statements, and naive datetime
 "src/f1_predict/data/models.py" = ["DTZ007"]  # Allow naive datetime in models
 "src/f1_predict/logging_config.py" = ["ARG001"]  # Allow unused arguments in logging config
+"src/f1_predict/models/*.py" = ["N806", "PLR2004", "E501", "S301", "PLC0415", "RET504"]  # ML models: allow uppercase vars (X), magic values (thresholds), long lines, pickle, import in function, return simplification
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
