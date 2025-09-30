@@ -6,14 +6,14 @@ This module provides an XGBoost classifier for predicting:
 - Race win probability
 """
 
-import pickle
 from pathlib import Path
+import pickle
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 import structlog
 import xgboost as xgb
-from sklearn.preprocessing import StandardScaler
 
 logger = structlog.get_logger(__name__)
 
@@ -320,7 +320,7 @@ class XGBoostRacePredictor:
         importance_dict = self.model.get_score(importance_type=importance_type)
 
         # Create full dictionary with all features (missing features get 0)
-        importance = {feature: 0.0 for feature in self.feature_names}
+        importance = dict.fromkeys(self.feature_names, 0.0)
         importance.update(importance_dict)
 
         # Normalize to sum to 1

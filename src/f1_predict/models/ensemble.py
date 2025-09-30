@@ -5,8 +5,8 @@ This module provides ensemble methods combining multiple models:
 - Weighted averaging
 """
 
-import pickle
 from pathlib import Path
+import pickle
 from typing import Any
 
 import numpy as np

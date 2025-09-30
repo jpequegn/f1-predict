@@ -6,14 +6,14 @@ This module provides a Random Forest classifier for predicting:
 - Race win probability
 """
 
-import pickle
 from pathlib import Path
+import pickle
 
 import numpy as np
 import pandas as pd
-import structlog
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
+import structlog
 
 logger = structlog.get_logger(__name__)
 
