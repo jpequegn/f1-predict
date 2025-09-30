@@ -11,6 +11,7 @@ from typing import Any
 from f1_predict import logging_config
 from f1_predict.data.cleaning import DataCleaner, DataQualityValidator
 from f1_predict.data.collector import F1DataCollector
+from f1_predict.features.engineering import FeatureEngineer
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -460,6 +461,90 @@ def _generate_validation_report(results: dict[str, Any], output_dir: str) -> Non
     logger.info(f"Validation report saved to: {report_file}")
 
 
+def generate_features(args: argparse.Namespace) -> None:
+    """Generate features for F1 prediction models.
+
+    Args:
+        args: Command line arguments
+    """
+    setup_logging(args.verbose)
+    logger = logging.getLogger(__name__)
+
+    try:
+        import pandas as pd
+
+        # Load required data
+        data_dir = Path(args.data_dir)
+
+        # Load race results
+        race_results_file = data_dir / "processed" / "race_results_cleaned.json"
+        if not race_results_file.exists():
+            race_results_file = data_dir / "raw" / "race_results.json"
+            if not race_results_file.exists():
+                logger.error(
+                    f"Race results not found. Run 'f1-predict collect' first."
+                )
+                sys.exit(1)
+
+        logger.info(f"Loading race results from {race_results_file}")
+        race_results = pd.read_json(race_results_file)
+
+        # Load qualifying results
+        qualifying_file = data_dir / "processed" / "qualifying_results_cleaned.json"
+        if not qualifying_file.exists():
+            qualifying_file = data_dir / "raw" / "qualifying_results.json"
+            if not qualifying_file.exists():
+                logger.error(
+                    f"Qualifying results not found. Run 'f1-predict collect' first."
+                )
+                sys.exit(1)
+
+        logger.info(f"Loading qualifying results from {qualifying_file}")
+        qualifying_results = pd.read_json(qualifying_file)
+
+        # Initialize feature engineer
+        engineer = FeatureEngineer(
+            driver_form_window=args.form_window,
+            team_reliability_window=args.reliability_window,
+            quali_race_window=args.quali_race_window,
+        )
+
+        # Generate features
+        logger.info("Generating features...")
+        features = engineer.generate_features(
+            race_results=race_results,
+            qualifying_results=qualifying_results,
+            circuit_id=args.circuit,
+        )
+
+        # Save features
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        output_file = output_dir / f"features.{args.format}"
+        logger.info(f"Saving features to {output_file}")
+
+        engineer.save_features(features, output_file)
+
+        # Print summary
+        logger.info(f"✓ Generated features for {len(features)} drivers")
+        logger.info(f"✓ Features saved to: {output_file}")
+        logger.info(f"✓ Total features: {len(features.columns) - 1}")  # Exclude driver_id
+
+        # Print feature names
+        if args.verbose:
+            feature_names = [col for col in features.columns if col != "driver_id"]
+            logger.info("Feature columns:")
+            for feature in feature_names:
+                logger.info(f"  - {feature}")
+
+    except Exception as e:
+        logger.error(f"Feature generation failed: {e}")
+        if args.verbose:
+            traceback.print_exc()
+        sys.exit(1)
+
+
 def create_parser() -> argparse.ArgumentParser:
     """Create command line argument parser.
 
@@ -480,9 +565,16 @@ Examples:
   # Validate all data with strict mode
   f1-predict validate --type all --data-dir data --strict
 
-  # Collect and clean pipeline
+  # Generate features for all drivers
+  f1-predict features --data-dir data --output-dir data/features
+
+  # Generate features for specific circuit
+  f1-predict features --data-dir data --circuit bahrain --output-dir data/features
+
+  # Complete pipeline: collect, clean, and generate features
   f1-predict collect --type all --data-dir data
   f1-predict clean --type all --data-dir data --output-dir data/processed
+  f1-predict features --data-dir data --output-dir data/features
         """,
     )
 
@@ -546,6 +638,50 @@ Examples:
         "--strict", action="store_true", help="Exit with error code if validation fails"
     )
     validate_parser.set_defaults(func=validate_data)
+
+    # Features command
+    features_parser = subparsers.add_parser(
+        "features", help="Generate features for machine learning models"
+    )
+    features_parser.add_argument(
+        "--data-dir",
+        default="data",
+        help="Input data directory (default: data)",
+    )
+    features_parser.add_argument(
+        "--output-dir",
+        default="data/features",
+        help="Output directory for generated features (default: data/features)",
+    )
+    features_parser.add_argument(
+        "--circuit",
+        help="Generate track-specific features for this circuit ID (optional)",
+    )
+    features_parser.add_argument(
+        "--form-window",
+        type=int,
+        default=5,
+        help="Number of recent races for driver form calculation (default: 5)",
+    )
+    features_parser.add_argument(
+        "--reliability-window",
+        type=int,
+        default=10,
+        help="Number of recent races for team reliability calculation (default: 10)",
+    )
+    features_parser.add_argument(
+        "--quali-race-window",
+        type=int,
+        default=10,
+        help="Number of recent races for qualifying-race gap calculation (default: 10)",
+    )
+    features_parser.add_argument(
+        "--format",
+        choices=["csv", "json"],
+        default="csv",
+        help="Output file format (default: csv)",
+    )
+    features_parser.set_defaults(func=generate_features)
 
     return parser
 
