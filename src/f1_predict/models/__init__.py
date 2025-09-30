@@ -9,8 +9,8 @@ This module provides various prediction models:
 """
 
 from f1_predict.models.baseline import RuleBasedPredictor
-from f1_predict.models.logistic import LogisticRacePredictor
 from f1_predict.models.evaluation import ModelEvaluator
+from f1_predict.models.logistic import LogisticRacePredictor
 
 __all__ = [
     "RuleBasedPredictor",

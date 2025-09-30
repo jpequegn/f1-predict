@@ -11,7 +11,6 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-import structlog
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -20,6 +19,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.model_selection import KFold
+import structlog
 
 logger = structlog.get_logger(__name__)
 
@@ -126,8 +126,9 @@ class ModelEvaluator:
             y_train = race_results.iloc[train_idx]
             y_test = race_results.iloc[test_idx]
 
-            # Train model
-            model.fit(X_train, y_train)
+            # Train model (if trainable)
+            if hasattr(model, "fit"):
+                model.fit(X_train, y_train)
 
             # Get predictions
             if hasattr(model, "predict_proba"):
@@ -169,14 +170,18 @@ class ModelEvaluator:
                 "precision": metrics_df["precision"].mean(),
                 "recall": metrics_df["recall"].mean(),
                 "f1_score": metrics_df["f1_score"].mean(),
-                "roc_auc": metrics_df["roc_auc"].mean() if "roc_auc" in metrics_df else None,
+                "roc_auc": metrics_df["roc_auc"].mean()
+                if "roc_auc" in metrics_df
+                else None,
             },
             "std_metrics": {
                 "accuracy": metrics_df["accuracy"].std(),
                 "precision": metrics_df["precision"].std(),
                 "recall": metrics_df["recall"].std(),
                 "f1_score": metrics_df["f1_score"].std(),
-                "roc_auc": metrics_df["roc_auc"].std() if "roc_auc" in metrics_df else None,
+                "roc_auc": metrics_df["roc_auc"].std()
+                if "roc_auc" in metrics_df
+                else None,
             },
             "fold_metrics": fold_metrics,
             "n_splits": self.n_splits,
@@ -192,7 +197,9 @@ class ModelEvaluator:
 
             avg_importance = {}
             for feature in all_features:
-                importances = [imp.get(feature, 0.0) for imp in feature_importance_per_fold]
+                importances = [
+                    imp.get(feature, 0.0) for imp in feature_importance_per_fold
+                ]
                 avg_importance[feature] = np.mean(importances)
 
             results["feature_importance"] = avg_importance
@@ -243,7 +250,7 @@ class ModelEvaluator:
 
             bin_metric = {
                 "bin": i,
-                "bin_range": f"[{bins[i]:.2f}, {bins[i+1]:.2f})",
+                "bin_range": f"[{bins[i]:.2f}, {bins[i + 1]:.2f})",
                 "count": int(mask.sum()),
                 "mean_predicted": float(y_proba[mask].mean()),
                 "mean_actual": float(y_true[mask].mean()),
@@ -308,7 +315,9 @@ class ModelEvaluator:
                     }
                 )
             except Exception as e:
-                self.logger.error("model_evaluation_failed", model_name=model_name, error=str(e))
+                self.logger.error(
+                    "model_evaluation_failed", model_name=model_name, error=str(e)
+                )
                 continue
 
         comparison_df = pd.DataFrame(comparison_results)

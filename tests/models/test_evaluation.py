@@ -210,7 +210,9 @@ class TestModelEvaluator:
     def test_compare_models_empty_dict(self, sample_features, sample_race_results):
         """Test model comparison with no models."""
         evaluator = ModelEvaluator()
-        comparison_df = evaluator.compare_models({}, sample_features, sample_race_results)
+        comparison_df = evaluator.compare_models(
+            {}, sample_features, sample_race_results
+        )
 
         assert comparison_df.empty
 

@@ -1,7 +1,7 @@
 """Tests for logistic regression prediction model."""
 
-import tempfile
 from pathlib import Path
+import tempfile
 
 import pandas as pd
 import pytest
@@ -29,7 +29,28 @@ def sample_race_results():
     return pd.DataFrame(
         {
             "driver_id": [f"driver{i}" for i in range(20)],
-            "position": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+            "position": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+            ],
         }
     )
 
@@ -153,7 +174,11 @@ class TestLogisticRacePredictor:
         predictions = predictor.predict(pd.DataFrame())
 
         assert predictions.empty
-        assert list(predictions.columns) == ["driver_id", "predicted_outcome", "confidence"]
+        assert list(predictions.columns) == [
+            "driver_id",
+            "predicted_outcome",
+            "confidence",
+        ]
 
     def test_predict_with_threshold(self, sample_features, sample_race_results):
         """Test prediction with custom threshold."""
@@ -164,7 +189,10 @@ class TestLogisticRacePredictor:
         low_threshold_pred = predictor.predict(sample_features, threshold=0.3)
         high_threshold_pred = predictor.predict(sample_features, threshold=0.7)
 
-        assert low_threshold_pred["predicted_outcome"].sum() >= high_threshold_pred["predicted_outcome"].sum()
+        assert (
+            low_threshold_pred["predicted_outcome"].sum()
+            >= high_threshold_pred["predicted_outcome"].sum()
+        )
 
     def test_get_feature_importance(self, sample_features, sample_race_results):
         """Test feature importance retrieval."""
@@ -227,7 +255,9 @@ class TestLogisticRacePredictor:
         with pytest.raises(FileNotFoundError):
             LogisticRacePredictor.load("nonexistent_model.pkl")
 
-    def test_different_targets_different_predictions(self, sample_features, sample_race_results):
+    def test_different_targets_different_predictions(
+        self, sample_features, sample_race_results
+    ):
         """Test that different targets produce different predictions."""
         podium_predictor = LogisticRacePredictor(target="podium")
         points_predictor = LogisticRacePredictor(target="points")
@@ -239,4 +269,7 @@ class TestLogisticRacePredictor:
         points_pred = points_predictor.predict(sample_features)
 
         # Points predictions should have more positive outcomes
-        assert points_pred["predicted_outcome"].sum() >= podium_pred["predicted_outcome"].sum()
+        assert (
+            points_pred["predicted_outcome"].sum()
+            >= podium_pred["predicted_outcome"].sum()
+        )

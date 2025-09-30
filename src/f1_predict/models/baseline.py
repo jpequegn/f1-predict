@@ -7,8 +7,6 @@ This module provides a simple baseline predictor using heuristic rules:
 - Circuit-specific performance
 """
 
-from typing import Optional
-
 import pandas as pd
 import structlog
 
@@ -40,7 +38,12 @@ class RuleBasedPredictor:
             reliability_weight: Weight for team reliability
             circuit_weight: Weight for circuit performance
         """
-        if not abs(quali_weight + form_weight + reliability_weight + circuit_weight - 1.0) < 0.01:
+        if (
+            not abs(
+                quali_weight + form_weight + reliability_weight + circuit_weight - 1.0
+            )
+            < 0.01
+        ):
             msg = "Weights must sum to 1.0"
             raise ValueError(msg)
 
@@ -67,7 +70,9 @@ class RuleBasedPredictor:
         self.logger.info("predicting_positions", num_drivers=len(features))
 
         if features.empty:
-            return pd.DataFrame(columns=["driver_id", "predicted_position", "confidence"])
+            return pd.DataFrame(
+                columns=["driver_id", "predicted_position", "confidence"]
+            )
 
         # Validate required columns
         required_cols = [
@@ -110,7 +115,10 @@ class RuleBasedPredictor:
             # Normalize confidence to 0-100 range
             features["confidence"] = (
                 (features["composite_score"] - features["composite_score"].min())
-                / (features["composite_score"].max() - features["composite_score"].min())
+                / (
+                    features["composite_score"].max()
+                    - features["composite_score"].min()
+                )
                 * 100
             )
         else:

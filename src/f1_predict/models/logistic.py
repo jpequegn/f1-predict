@@ -6,15 +6,14 @@ This module provides a logistic regression classifier for predicting:
 - Race win probability
 """
 
-import pickle
 from pathlib import Path
-from typing import Optional
+import pickle
 
 import numpy as np
 import pandas as pd
-import structlog
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
+import structlog
 
 logger = structlog.get_logger(__name__)
 
@@ -78,10 +77,10 @@ class LogisticRacePredictor:
         """
         if self.target == "podium":
             return (race_results["position"] <= 3).astype(int)
-        elif self.target == "points":
+        if self.target == "points":
             return (race_results["position"] <= 10).astype(int)
-        else:  # win
-            return (race_results["position"] == 1).astype(int)
+        # win
+        return (race_results["position"] == 1).astype(int)
 
     def fit(
         self,
@@ -105,7 +104,9 @@ class LogisticRacePredictor:
 
         # Validate alignment
         if len(features) != len(race_results):
-            msg = f"Feature count ({len(features)}) != result count ({len(race_results)})"
+            msg = (
+                f"Feature count ({len(features)}) != result count ({len(race_results)})"
+            )
             raise ValueError(msg)
 
         # Prepare features
@@ -189,7 +190,9 @@ class LogisticRacePredictor:
         self.logger.info("predicting", num_samples=len(features))
 
         if features.empty:
-            return pd.DataFrame(columns=["driver_id", "predicted_outcome", "confidence"])
+            return pd.DataFrame(
+                columns=["driver_id", "predicted_outcome", "confidence"]
+            )
 
         # Get probabilities
         probabilities = self.predict_proba(features)

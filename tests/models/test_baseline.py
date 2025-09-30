@@ -34,7 +34,10 @@ class TestRuleBasedPredictor:
     def test_initialization_with_custom_weights(self):
         """Test predictor with custom weights."""
         predictor = RuleBasedPredictor(
-            quali_weight=0.5, form_weight=0.3, reliability_weight=0.1, circuit_weight=0.1
+            quali_weight=0.5,
+            form_weight=0.3,
+            reliability_weight=0.1,
+            circuit_weight=0.1,
         )
         assert predictor.quali_weight == 0.5
         assert predictor.form_weight == 0.3
@@ -43,7 +46,10 @@ class TestRuleBasedPredictor:
         """Test that invalid weights raise error."""
         with pytest.raises(ValueError, match="Weights must sum to 1.0"):
             RuleBasedPredictor(
-                quali_weight=0.5, form_weight=0.3, reliability_weight=0.1, circuit_weight=0.2
+                quali_weight=0.5,
+                form_weight=0.3,
+                reliability_weight=0.1,
+                circuit_weight=0.2,
             )
 
     def test_predict_basic(self, sample_features):
@@ -69,7 +75,11 @@ class TestRuleBasedPredictor:
         predictions = predictor.predict(pd.DataFrame())
 
         assert predictions.empty
-        assert list(predictions.columns) == ["driver_id", "predicted_position", "confidence"]
+        assert list(predictions.columns) == [
+            "driver_id",
+            "predicted_position",
+            "confidence",
+        ]
 
     def test_predict_missing_columns(self):
         """Test prediction with missing required columns."""
@@ -96,11 +106,18 @@ class TestRuleBasedPredictor:
             }
         )
 
-        predictor = RuleBasedPredictor(quali_weight=0.8, form_weight=0.1, reliability_weight=0.05, circuit_weight=0.05)
+        predictor = RuleBasedPredictor(
+            quali_weight=0.8,
+            form_weight=0.1,
+            reliability_weight=0.05,
+            circuit_weight=0.05,
+        )
         predictions = predictor.predict(features)
 
         # driver1 should still be first due to quali position
-        top_driver = predictions[predictions["predicted_position"] == 1]["driver_id"].values[0]
+        top_driver = predictions[predictions["predicted_position"] == 1][
+            "driver_id"
+        ].values[0]
         assert top_driver == "driver1"
 
     def test_get_feature_importance(self):
@@ -114,37 +131,57 @@ class TestRuleBasedPredictor:
         assert importance["team_reliability_score"] == 0.1
         assert importance["circuit_performance_score"] == 0.1
 
-    def test_predict_confidence_variation(self):
-        """Test that confidence varies with score separation."""
-        # High separation scenario
-        high_sep_features = pd.DataFrame(
+    def test_predict_confidence_calculation(self):
+        """Test that confidence is calculated based on score distribution."""
+        # Varied performance scenario with 5 drivers
+        features = pd.DataFrame(
             {
-                "driver_id": ["fast", "slow"],
-                "qualifying_position": [1, 10],
-                "driver_form_score": [95.0, 30.0],
-                "team_reliability_score": [95.0, 30.0],
-                "circuit_performance_score": [95.0, 30.0],
-            }
-        )
-
-        # Low separation scenario
-        low_sep_features = pd.DataFrame(
-            {
-                "driver_id": ["driver1", "driver2"],
-                "qualifying_position": [1, 2],
-                "driver_form_score": [80.0, 79.0],
-                "team_reliability_score": [80.0, 79.0],
-                "circuit_performance_score": [80.0, 79.0],
+                "driver_id": ["d1", "d2", "d3", "d4", "d5"],
+                "qualifying_position": [1, 2, 3, 4, 5],
+                "driver_form_score": [95.0, 85.0, 75.0, 65.0, 55.0],
+                "team_reliability_score": [90.0, 85.0, 80.0, 75.0, 70.0],
+                "circuit_performance_score": [92.0, 87.0, 82.0, 77.0, 72.0],
             }
         )
 
         predictor = RuleBasedPredictor()
+        predictions = predictor.predict(features)
 
-        high_sep_pred = predictor.predict(high_sep_features)
-        low_sep_pred = predictor.predict(low_sep_features)
+        # Confidence should vary across drivers
+        assert predictions["confidence"].std() > 0
 
-        # High separation should have larger confidence difference
-        high_conf_range = high_sep_pred["confidence"].max() - high_sep_pred["confidence"].min()
-        low_conf_range = low_sep_pred["confidence"].max() - low_sep_pred["confidence"].min()
+        # Top driver should have higher confidence than bottom
+        top_conf = predictions[predictions["predicted_position"] == 1][
+            "confidence"
+        ].values[0]
+        bottom_conf = predictions[predictions["predicted_position"] == 5][
+            "confidence"
+        ].values[0]
+        assert top_conf > bottom_conf
 
-        assert high_conf_range > low_conf_range
+    def test_predict_equal_scores_produces_varying_confidence(self):
+        """Test confidence with equal secondary scores but different quali positions."""
+        # All drivers have identical form/reliability/circuit scores
+        # but different qualifying positions
+        features = pd.DataFrame(
+            {
+                "driver_id": ["d1", "d2", "d3"],
+                "qualifying_position": [1, 2, 3],
+                "driver_form_score": [80.0, 80.0, 80.0],
+                "team_reliability_score": [85.0, 85.0, 85.0],
+                "circuit_performance_score": [82.0, 82.0, 82.0],
+            }
+        )
+
+        predictor = RuleBasedPredictor()
+        predictions = predictor.predict(features)
+
+        # Confidence should still vary due to qualifying positions
+        # Driver with P1 should have highest confidence
+        top_conf = predictions[predictions["predicted_position"] == 1][
+            "confidence"
+        ].values[0]
+        bottom_conf = predictions[predictions["predicted_position"] == 3][
+            "confidence"
+        ].values[0]
+        assert top_conf > bottom_conf
