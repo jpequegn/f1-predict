@@ -119,6 +119,13 @@ profiling = [
     "memory-profiler>=0.61.0",
 ]
 
+# Web interface
+web = [
+    "streamlit>=1.31.0",
+    "streamlit-option-menu>=0.3.12",
+    "streamlit-autorefresh>=1.0.1",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/jpequegn/f1-predict"
 "Bug Reports" = "https://github.com/jpequegn/f1-predict/issues"
@@ -206,6 +213,8 @@ exclude = [
 "src/f1_predict/logging_config.py" = ["ARG001"]  # Allow unused arguments in logging config
 "src/f1_predict/models/*.py" = ["N806", "PLR2004", "E501", "S301", "PLC0415", "RET504"]  # ML models: allow uppercase vars (X), magic values (thresholds), long lines, pickle, import in function, return simplification
 "src/f1_predict/llm/*.py" = ["E501", "PLR2004", "S603", "S607"]  # LLM: allow long lines, magic values, subprocess without shell=false
+"src/f1_predict/web/*.py" = ["E501", "T201", "PLR2004"]  # Web: allow long lines, print statements, magic values
+"src/f1_predict/web/**/*.py" = ["E501", "T201", "PLR2004"]  # Web pages: allow long lines, print statements, magic values
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
