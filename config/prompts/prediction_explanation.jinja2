@@ -1,0 +1,47 @@
+Explain this F1 race prediction in clear, accessible language:
+
+**Prediction Details:**
+- Driver: {{ driver_name }}
+- Predicted Position: {{ position }}
+- Confidence Level: {{ confidence }}%
+- Model Used: {{ model_name }}
+
+**Contributing Factors (by importance):**
+{% for feature, importance, explanation in top_features %}
+{{ loop.index }}. {{ feature }}: {{ importance }} - {{ explanation }}
+{% endfor %}
+
+**Historical Context:**
+- Driver's performance at {{ circuit }}: {{ past_performance }}
+- Recent form (last 5 races): {{ recent_results }}
+{% if head_to_head %}
+- Head-to-head vs rivals: {{ head_to_head }}
+{% endif %}
+
+**Task:**
+Provide a 200-300 word explanation that includes:
+
+1. **Summary** (1-2 sentences)
+   - Clear statement of the prediction and overall reasoning
+
+2. **Key Factors Explained** (3-5 factors)
+   - Translate each technical feature into plain English
+   - Explain why each factor matters for this prediction
+   - Use analogies F1 fans would understand
+
+3. **Supporting Evidence** (2-3 points)
+   - Historical patterns that support this prediction
+   - Recent performance indicators
+   - Circuit-specific factors
+
+4. **Confidence Interpretation** (1-2 sentences)
+   - What the {{ confidence }}% confidence level means in practical terms
+   - Is this a strong, moderate, or uncertain prediction?
+
+5. **Potential Variables** (1-2 points)
+   - What could change this prediction?
+   - Key factors to monitor
+
+**Tone:** Informative and accessible. Avoid technical jargon. Explain like you're talking to an F1 fan who doesn't have a statistics background.
+
+**Important:** Be honest about uncertainty. Don't overstate confidence. Base explanations only on the provided data.
