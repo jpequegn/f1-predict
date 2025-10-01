@@ -1,0 +1,69 @@
+You are an F1 race analyst. Generate an engaging race preview for:
+
+**Race Information:**
+- Race: {{ race_name }}
+- Circuit: {{ circuit_name }}
+- Date: {{ race_date }}
+- Round: {{ round_number }}
+
+**Circuit Characteristics:**
+{{ circuit_characteristics }}
+
+**Historical Context:**
+- Past winner: {{ past_winner }}
+- Lap record: {{ lap_record }}
+{% if interesting_facts %}
+- Notable: {{ interesting_facts }}
+{% endif %}
+
+**Current Championship Standings (Top 5):**
+{% for driver in top_drivers %}
+{{ loop.index }}. {{ driver.name }} - {{ driver.points }} points
+{% endfor %}
+
+**ML Model Predictions:**
+- Predicted winner: {{ predicted_winner }} ({{ confidence }}% confidence)
+- Predicted podium: {{ predicted_podium }}
+{% if key_factors %}
+
+**Key Prediction Factors:**
+{% for factor in key_factors %}
+- {{ factor }}
+{% endfor %}
+{% endif %}
+
+**Task:**
+Write a 400-600 word race preview that includes:
+
+1. **Opening Hook** (1-2 sentences)
+   - Capture the main storyline or intrigue for this race
+
+2. **Circuit Analysis** (2-3 sentences)
+   - What makes this track unique
+   - Key challenges for drivers
+   - Historical significance
+
+3. **Championship Context** (1-2 sentences)
+   - Current title battle state
+   - What's at stake for contenders
+
+4. **Drivers to Watch** (3-4 drivers, 1-2 sentences each)
+   - Why they're likely to perform well
+   - Recent form and circuit history
+   - Include ML prediction for their likely finish
+
+5. **Strategic Considerations** (2-3 points)
+   - Tire strategy factors
+   - Weather expectations
+   - Unique tactical elements
+
+6. **Bold Prediction** (1-2 sentences)
+   - Your specific prediction with confidence
+   - Key reasoning based on ML model insights
+
+7. **Conclusion** (1 sentence)
+   - Build excitement for the race
+
+**Tone:** Professional but engaging, similar to Sky Sports F1 style commentary. Be factual, insightful, and exciting without being overly dramatic.
+
+**Important:** Base your analysis on the provided data and ML predictions. Do not invent statistics or facts.

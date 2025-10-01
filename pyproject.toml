@@ -57,6 +57,12 @@ dependencies = [
     # Data validation
     "pydantic>=2.0.0",
     "pandera>=0.17.0",
+
+    # LLM integration
+    "openai>=1.0.0",
+    "anthropic>=0.25.0",
+    "jinja2>=3.1.0",
+    "httpx>=0.25.0",
 ]
 
 [project.optional-dependencies]
@@ -67,6 +73,7 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
     "pytest-xdist>=3.3.0",  # Parallel test execution
+    "pytest-asyncio>=0.21.0",  # Async test support
 
     # Code quality
     "ruff>=0.1.0",
@@ -192,6 +199,7 @@ exclude = [
 "src/f1_predict/data/models.py" = ["DTZ007"]  # Allow naive datetime in models
 "src/f1_predict/logging_config.py" = ["ARG001"]  # Allow unused arguments in logging config
 "src/f1_predict/models/*.py" = ["N806", "PLR2004", "E501", "S301", "PLC0415", "RET504"]  # ML models: allow uppercase vars (X), magic values (thresholds), long lines, pickle, import in function, return simplification
+"src/f1_predict/llm/*.py" = ["E501", "PLR2004", "S603", "S607"]  # LLM: allow long lines, magic values, subprocess without shell=false
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
@@ -226,6 +234,7 @@ markers = [
     "ml: marks tests related to machine learning models",
     "data: marks tests related to data processing",
     "api: marks tests related to API functionality",
+    "asyncio: marks tests as async (handled by pytest-asyncio)",
 ]
 filterwarnings = [
     "error",
