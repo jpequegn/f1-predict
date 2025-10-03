@@ -335,13 +335,14 @@ class F1DataCollector:
         return str(output_file)
 
     def collect_and_clean_all_data(
-        self, force_refresh: bool = False, enable_cleaning: bool = True
+        self, force_refresh: bool = False, enable_cleaning: bool = True, enable_enrichment: bool = False
     ) -> dict[str, any]:
         """Collect and optionally clean all types of F1 data.
 
         Args:
             force_refresh: If True, re-download data even if files exist
             enable_cleaning: If True, clean the data after collection
+            enable_enrichment: If True, enrich data with external sources
 
         Returns:
             Dictionary with status of collection and cleaning operations
@@ -364,6 +365,18 @@ class F1DataCollector:
             except Exception as e:
                 self.logger.error(f"Data cleaning failed: {e}")
                 results["cleaning"] = {"error": str(e)}
+
+        if enable_enrichment:
+            try:
+                enrichment_results = self.enrich_collected_data()
+                results["enrichment"] = enrichment_results
+
+            except ImportError:
+                self.logger.warning("External data enrichment module not available")
+                results["enrichment"] = {"error": "Enrichment module not available"}
+            except Exception as e:
+                self.logger.error(f"Data enrichment failed: {e}")
+                results["enrichment"] = {"error": str(e)}
 
         return results
 
@@ -592,6 +605,90 @@ class F1DataCollector:
         """
         with open(file_path, "w", encoding="utf-8") as jsonfile:
             json.dump(data, jsonfile, indent=2, ensure_ascii=False)
+
+    def enrich_collected_data(self) -> dict[str, any]:
+        """Enrich collected data with external sources (weather, track, tire data).
+
+        Returns:
+            Dictionary with enrichment results for each data type
+        """
+        from f1_predict.data.track_data import TrackDataManager
+        from f1_predict.data.weather_collector import WeatherDataCollector
+
+        self.logger.info("Starting data enrichment pipeline")
+
+        results = {}
+
+        # Load schedule data for circuit information
+        schedules_file = self.raw_dir / "race_schedules_2020_2024.json"
+        if not schedules_file.exists():
+            results["error"] = "Race schedules not found. Run data collection first."
+            return results
+
+        with open(schedules_file) as f:
+            schedules = json.load(f)
+
+        # Initialize external data collectors
+        track_manager = TrackDataManager()
+        enriched_data = []
+
+        # Enrich each race with external data
+        for schedule in schedules:
+            try:
+                circuit_id = schedule.get("circuit_id")
+                season = schedule.get("season")
+                round_num = schedule.get("round")
+
+                # Get track characteristics
+                track_chars = track_manager.get_track(circuit_id)
+
+                enrichment = {
+                    "season": season,
+                    "round": round_num,
+                    "circuit_id": circuit_id,
+                    "track_characteristics": track_chars.model_dump() if track_chars else None,
+                }
+
+                enriched_data.append(enrichment)
+
+                self.logger.debug(
+                    f"Enriched {season} round {round_num} with track data: {circuit_id}"
+                )
+
+            except Exception as e:
+                self.logger.warning(f"Failed to enrich race {season} round {round_num}: {e}")
+                continue
+
+        # Save enriched data
+        if enriched_data:
+            enriched_file = self.processed_dir / "enriched_race_data.json"
+            self._save_to_json(enriched_data, enriched_file)
+
+            results["enriched_data"] = {
+                "status": "success",
+                "enriched_count": len(enriched_data),
+                "total_schedules": len(schedules),
+                "enriched_file": str(enriched_file),
+                "coverage": len(enriched_data) / len(schedules) if schedules else 0,
+            }
+
+            self.logger.info(
+                f"Enriched {len(enriched_data)}/{len(schedules)} races with external data"
+            )
+        else:
+            results["enriched_data"] = {
+                "status": "failed",
+                "message": "No data was enriched",
+            }
+
+        # Note about weather data
+        results["weather_note"] = (
+            "Weather data collection requires OPENWEATHER_API_KEY environment variable. "
+            "Historical weather data may require paid OpenWeatherMap subscription."
+        )
+
+        self.logger.info("Data enrichment pipeline completed")
+        return results
 
     def __enter__(self):
         """Context manager entry."""
