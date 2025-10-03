@@ -37,9 +37,20 @@ def collect_data(args: argparse.Namespace) -> None:
     try:
         collector = F1DataCollector(data_dir=args.data_dir)
 
+        # Check if enrichment is requested
+        enable_enrichment = getattr(args, "enrich", False)
+
         if args.type == "all":
             logger.info("Collecting all data types")
-            results = collector.collect_all_data()
+            if enable_enrichment:
+                logger.info("External data enrichment enabled")
+                results = collector.collect_and_clean_all_data(
+                    force_refresh=False,
+                    enable_cleaning=False,
+                    enable_enrichment=True,
+                )
+            else:
+                results = collector.collect_all_data()
         elif args.type == "race-results":
             logger.info("Collecting race results")
             results = {"race_results": collector.collect_race_results()}
@@ -54,9 +65,22 @@ def collect_data(args: argparse.Namespace) -> None:
             sys.exit(1)
 
         # Print summary
-        for data_type, file_path in results.items():
-            if file_path:
+        if enable_enrichment and "enrichment" in results:
+            enrichment_info = results.get("enrichment", {})
+            logger.info("External data enrichment results:")
+            for key, value in enrichment_info.items():
+                if isinstance(value, dict):
+                    logger.info(f"  {key}: {value}")
+                else:
+                    logger.info(f"  {key}: {value}")
+
+        # Print collection results
+        collection_results = results.get("collection", results)
+        for data_type, file_path in collection_results.items():
+            if isinstance(file_path, str):
                 logger.info(f"✓ {data_type}: {file_path}")
+            elif file_path:
+                logger.info(f"✓ {data_type}: Success")
             else:
                 logger.warning(f"✗ {data_type}: Collection failed")
 
@@ -688,6 +712,11 @@ Examples:
     )
     collect_parser.add_argument(
         "--data-dir", default="data", help="Data directory (default: data)"
+    )
+    collect_parser.add_argument(
+        "--enrich",
+        action="store_true",
+        help="Enrich data with external sources (weather, track characteristics)",
     )
     collect_parser.set_defaults(func=collect_data)
 
