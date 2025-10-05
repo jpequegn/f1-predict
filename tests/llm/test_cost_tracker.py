@@ -230,12 +230,26 @@ class TestCostTracker:
         with pytest.raises(BudgetExceededError, match="Daily budget exceeded"):
             tracker.record_usage(record)
 
-    def test_monthly_budget_exceeded(self, tracker):
-        """Test monthly budget enforcement."""
-        # First, add some usage
-        for _ in range(19):
+    def test_monthly_budget_exceeded(self, temp_db):
+        """Test monthly budget enforcement.
+
+        Note: Uses custom tracker with high daily budget to test monthly limits.
+        All records must be within the current month.
+        """
+        # Create tracker with high daily budget to avoid hitting daily limit
+        high_daily_tracker = CostTracker(
+            db_path=temp_db,
+            daily_budget=1000.0,  # High enough to not hit daily limit
+            monthly_budget=200.0,
+            alert_threshold=0.8,
+        )
+
+        # Add usage on different hours of today to approach monthly budget
+        # Total: 19 * $10 = $190
+        now = datetime.now()
+        for hour in range(19):
             record = UsageRecord(
-                timestamp=datetime.now(),
+                timestamp=now.replace(hour=hour, minute=0, second=0, microsecond=0),
                 provider="openai",
                 model="gpt-4",
                 template=None,
@@ -246,24 +260,25 @@ class TestCostTracker:
                 request_duration=1.5,
                 success=True,
             )
-            tracker.record_usage(record)
+            high_daily_tracker.record_usage(record)
 
         # Now try to add one that exceeds monthly budget
+        # Current monthly total: $190, adding $11 would exceed $200
         record = UsageRecord(
-            timestamp=datetime.now(),
+            timestamp=now,
             provider="openai",
             model="gpt-4",
             template=None,
             input_tokens=100,
             output_tokens=200,
             total_tokens=300,
-            estimated_cost=11.0,  # Would exceed 200.0 monthly budget
+            estimated_cost=11.0,  # Would exceed 200.0 monthly budget (190 + 11 = 201)
             request_duration=1.5,
             success=True,
         )
 
         with pytest.raises(BudgetExceededError, match="Monthly budget exceeded"):
-            tracker.record_usage(record)
+            high_daily_tracker.record_usage(record)
 
     def test_get_usage_stats(self, tracker):
         """Test usage statistics generation."""
