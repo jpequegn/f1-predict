@@ -7,6 +7,7 @@ from f1_predict.web.pages import (
     analytics,
     chat,
     settings,
+    explainability,
 )
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "predict",
     "compare",
     "analytics",
+    "explainability",
     "chat",
     "settings",
 ]
