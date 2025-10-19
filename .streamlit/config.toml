@@ -1,0 +1,39 @@
+[theme]
+primaryColor = "#1F4E8C"
+backgroundColor = "#121317"
+secondaryBackgroundColor = "#1E2130"
+textColor = "#E0E6F0"
+font = "sans serif"
+
+[server]
+port = 8501
+headless = true
+runOnSave = false
+fastReruns = true
+enableCORS = false
+enableXsrfProtection = true
+enableWebsocketCompression = true
+maxUploadSize = 200
+serverAddress = "0.0.0.0"
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = false
+showSidebarNavigation = true
+
+[runner]
+magicEnabled = false
+installTracer = false
+fixMatplotlib = true
+fastReruns = true
+
+[logger]
+level = "info"
+messageFormat = "%(asctime)s %(message)s"
+
+[client.toolbarMode]
+minified = true

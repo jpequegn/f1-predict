@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  # Main Streamlit web application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: f1-predict-web
+    ports:
+      - "${WEB_PORT:-8501}:8501"
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8501
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - CACHE_TTL_SECONDS=${CACHE_TTL_SECONDS:-3600}
+      - MAX_WORKERS=${MAX_WORKERS:-4}
+      - ENABLE_METRICS=${ENABLE_METRICS:-true}
+      - ENABLE_REDIS=${ENABLE_REDIS:-false}
+      - REDIS_URL=redis://redis:6379/0
+      - ENABLE_RATE_LIMITING=${ENABLE_RATE_LIMITING:-true}
+      - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS:-100}
+      - RATE_LIMIT_WINDOW_SECONDS=${RATE_LIMIT_WINDOW_SECONDS:-60}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - f1-predict-network
+    labels:
+      - "com.f1-predict.service=web"
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: f1-predict-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    environment:
+      - REDIS_MAXMEMORY=${REDIS_MAXMEMORY:-512mb}
+      - REDIS_MAXMEMORY_POLICY=allkeys-lru
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - f1-predict-network
+    labels:
+      - "com.f1-predict.service=cache"
+    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-512mb} --maxmemory-policy allkeys-lru
+
+networks:
+  f1-predict-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
