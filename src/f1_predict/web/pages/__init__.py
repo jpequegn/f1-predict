@@ -1,13 +1,13 @@
 """Web application pages for F1 Race Predictor."""
 
 from f1_predict.web.pages import (
-    home,
-    predict,
-    compare,
     analytics,
     chat,
-    settings,
+    compare,
     explainability,
+    home,
+    predict,
+    settings,
 )
 
 __all__ = [

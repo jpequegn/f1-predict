@@ -7,16 +7,16 @@ and analysis. Built with Streamlit and Nebula UI design system.
 import streamlit as st
 from streamlit_option_menu import option_menu
 
-from f1_predict.web.utils.theme import apply_nebula_theme
 from f1_predict.web.pages import (
-    home,
-    predict,
-    compare,
     analytics,
     chat,
-    settings,
+    compare,
     explainability,
+    home,
+    predict,
+    settings,
 )
+from f1_predict.web.utils.theme import apply_nebula_theme
 
 
 def main() -> None:

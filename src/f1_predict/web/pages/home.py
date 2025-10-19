@@ -1,8 +1,9 @@
 """Home/Dashboard page for F1 Race Predictor web app."""
 
-import streamlit as st
 from datetime import datetime
 from typing import Dict, List
+
+import streamlit as st
 
 
 def show_home_page() -> None:
