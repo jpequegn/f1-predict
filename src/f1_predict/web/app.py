@@ -13,6 +13,7 @@ from f1_predict.web.pages import (
     compare,
     explainability,
     home,
+    monitoring,
     predict,
     settings,
 )
@@ -56,12 +57,13 @@ def main() -> None:
 
         selected = option_menu(
             menu_title=None,
-            options=["Home", "Predict", "Compare", "Analytics", "Explainability", "Chat", "Settings"],
+            options=["Home", "Predict", "Compare", "Analytics", "Monitoring", "Explainability", "Chat", "Settings"],
             icons=[
                 "house-fill",
                 "trophy-fill",
                 "bar-chart-fill",
                 "graph-up",
+                "activity",
                 "search",
                 "chat-dots-fill",
                 "gear-fill",
@@ -104,6 +106,8 @@ def main() -> None:
         compare.show_comparison_page()
     elif selected == "Analytics":
         analytics.show_analytics_page()
+    elif selected == "Monitoring":
+        monitoring.show_monitoring_page()
     elif selected == "Explainability":
         explainability.show_explainability_page()
     elif selected == "Chat":
