@@ -44,6 +44,14 @@ dependencies = [
     "lightgbm>=4.0.0",
     "shap>=0.43.0",
 
+    # Time series forecasting
+    "statsmodels>=0.14.0",
+    "prophet>=1.1.0",
+
+    # Deep learning
+    "tensorflow>=2.13.0",
+    "keras>=2.13.0",
+
     # Web scraping and APIs
     "requests>=2.31.0",
     "beautifulsoup4>=4.12.0",
