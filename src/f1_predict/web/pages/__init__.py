@@ -6,6 +6,7 @@ from f1_predict.web.pages import (
     compare,
     explainability,
     home,
+    monitoring,
     predict,
     settings,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "predict",
     "compare",
     "analytics",
+    "monitoring",
     "explainability",
     "chat",
     "settings",
