@@ -3,7 +3,7 @@
 Provides:
 - Alert creation and management
 - Threshold-based alerts
-- Multiple alert channels (email, console, file)
+- Multiple alert channels (email, Slack, console, file)
 - Alert history and tracking
 """
 
@@ -12,9 +12,18 @@ from enum import Enum
 import json
 from pathlib import Path
 import time
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import structlog
+
+from f1_predict.web.utils.alert_channels import (
+    EmailAlertChannel,
+    SlackAlertChannel,
+)
+from f1_predict.web.utils.alert_config import (
+    AlertChannelConfig,
+    load_alert_config_from_env,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -83,11 +92,16 @@ class AlertRule:
 class AlertingSystem:
     """Manages alerts and alert rules."""
 
-    def __init__(self, data_dir: Path | str = "data/monitoring"):
+    def __init__(
+        self,
+        data_dir: Path | str = "data/monitoring",
+        channel_config: Optional[AlertChannelConfig] = None,
+    ):
         """Initialize alerting system.
 
         Args:
             data_dir: Directory for alert storage
+            channel_config: Alert channel configuration (loads from env if None)
         """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -96,6 +110,16 @@ class AlertingSystem:
         self.logger = logger.bind(component="alerting_system")
         self.alert_callbacks: dict[str, list[Callable]] = {}
         self._last_alert_times: dict[str, float] = {}
+
+        # Initialize alert channels
+        if channel_config is None:
+            channel_config = load_alert_config_from_env()
+
+        self.channel_config = channel_config
+        self.email_channel: Optional[EmailAlertChannel] = None
+        self.slack_channel: Optional[SlackAlertChannel] = None
+
+        self._initialize_channels()
         self._load_rules()
 
     def create_alert(
@@ -365,6 +389,39 @@ class AlertingSystem:
                 except Exception as e:
                     self.logger.error("error_in_alert_callback", error=str(e))
 
+    def _initialize_channels(self) -> None:
+        """Initialize alert channels from configuration."""
+        try:
+            # Initialize email channel
+            if self.channel_config.email.enabled:
+                self.email_channel = EmailAlertChannel(
+                    smtp_server=self.channel_config.email.smtp_server,
+                    smtp_port=self.channel_config.email.smtp_port,
+                    sender_email=self.channel_config.email.sender_email,
+                    sender_password=self.channel_config.email.sender_password,
+                    recipients=self.channel_config.email.recipients,
+                )
+                if self.email_channel.validate_config():
+                    self.logger.info("email_channel_initialized")
+                else:
+                    self.logger.warning("email_channel_init_failed")
+                    self.email_channel = None
+
+            # Initialize Slack channel
+            if self.channel_config.slack.enabled:
+                self.slack_channel = SlackAlertChannel(
+                    bot_token=self.channel_config.slack.bot_token,
+                    channel_id=self.channel_config.slack.channel_id,
+                )
+                if self.slack_channel.validate_config():
+                    self.logger.info("slack_channel_initialized")
+                else:
+                    self.logger.warning("slack_channel_init_failed")
+                    self.slack_channel = None
+
+        except Exception as e:
+            self.logger.error("alert_channels_init_failed", error=str(e))
+
     def _deliver_alert(self, alert: Alert, channel: str) -> None:
         """Deliver alert to specified channel.
 
@@ -373,6 +430,8 @@ class AlertingSystem:
             channel: Channel name
         """
         try:
+            alert_dict = alert.to_dict()
+
             if channel == "console":
                 print(
                     f"[{alert.severity.upper()}] {alert.title}: {alert.message}"
@@ -385,7 +444,19 @@ class AlertingSystem:
                         f"[{alert.timestamp}] [{alert.severity}] {alert.title}\n"
                     )
                     f.write(f"  {alert.message}\n\n")
-            # Email and Slack would require additional configuration
+            elif channel == "email":
+                if self.email_channel:
+                    self.email_channel.send(alert_dict)
+                else:
+                    self.logger.warning("email_channel_not_configured")
+            elif channel == "slack":
+                if self.slack_channel:
+                    self.slack_channel.send(alert_dict)
+                else:
+                    self.logger.warning("slack_channel_not_configured")
+            else:
+                self.logger.warning("unknown_alert_channel", channel=channel)
+
         except Exception as e:
             self.logger.error("error_delivering_alert", channel=channel, error=str(e))
 
