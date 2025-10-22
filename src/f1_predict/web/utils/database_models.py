@@ -34,6 +34,8 @@ class Prediction(Base):
     prediction_id = Column(String(100), unique=True, nullable=False, index=True)
     predicted_outcome = Column(Integer, nullable=False)
     confidence = Column(Float, nullable=False)
+    actual_outcome = Column(Integer, nullable=True)  # Recorded later
+    actual_outcome_timestamp = Column(DateTime(timezone=True), nullable=True)
     features = Column(JSON, nullable=False)
     extra_metadata = Column(JSON)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -52,6 +54,12 @@ class Prediction(Base):
             "prediction_id": self.prediction_id,
             "predicted_outcome": self.predicted_outcome,
             "confidence": self.confidence,
+            "actual_outcome": self.actual_outcome,
+            "actual_outcome_timestamp": (
+                self.actual_outcome_timestamp.isoformat()
+                if self.actual_outcome_timestamp
+                else None
+            ),
             "features": self.features,
             "extra_metadata": self.extra_metadata,
         }

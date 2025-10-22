@@ -1,8 +1,8 @@
-"""Initial monitoring database schema
+"""Add actual_outcome fields to predictions table
 
-Revision ID: 462a2c9ee564
+Revision ID: 98645a3399fe
 Revises: 
-Create Date: 2025-10-22 03:23:52.221670
+Create Date: 2025-10-22 05:03:06.717732
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '462a2c9ee564'
+revision: str = '98645a3399fe'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -163,6 +163,8 @@ def upgrade() -> None:
     sa.Column('prediction_id', sa.String(length=100), nullable=False),
     sa.Column('predicted_outcome', sa.Integer(), nullable=False),
     sa.Column('confidence', sa.Float(), nullable=False),
+    sa.Column('actual_outcome', sa.Integer(), nullable=True),
+    sa.Column('actual_outcome_timestamp', sa.DateTime(timezone=True), nullable=True),
     sa.Column('features', sa.JSON(), nullable=False),
     sa.Column('extra_metadata', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=True),
