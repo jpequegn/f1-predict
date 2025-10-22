@@ -140,6 +140,13 @@ web = [
     "streamlit-autorefresh>=1.0.1",
 ]
 
+# Database backend
+database = [
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.0",
+    "alembic>=1.12.0",
+]
+
 [project.urls]
 "Homepage" = "https://github.com/jpequegn/f1-predict"
 "Bug Reports" = "https://github.com/jpequegn/f1-predict/issues"
