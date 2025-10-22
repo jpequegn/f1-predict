@@ -11,14 +11,17 @@ import pandas as pd
 import streamlit as st
 import structlog
 
-from f1_predict.web.utils.alerting import AlertingSystem
 from f1_predict.web.utils.drift_detection import DriftDetector
-from f1_predict.web.utils.monitoring import ModelPerformanceTracker
 from f1_predict.web.utils.monitoring_dashboard import (
     ChartBuilders,
     DataLoaders,
     TableFormatters,
     display_dashboard_info_box,
+)
+from f1_predict.web.utils.monitoring_factory import (
+    get_alerting_system,
+    get_performance_tracker,
+    is_database_backend_enabled,
 )
 
 logger = structlog.get_logger(__name__)
@@ -28,14 +31,18 @@ logger = structlog.get_logger(__name__)
 def get_monitoring_systems() -> dict[str, Any]:
     """Get or initialize monitoring systems.
 
+    Uses factory pattern to select between file-based and database-backed
+    implementations based on MONITORING_DB_ENABLED environment variable.
+
     Returns:
         Dictionary with monitoring system instances
     """
     temp_dir = tempfile.gettempdir()
     return {
-        "performance_tracker": ModelPerformanceTracker(temp_dir),
-        "alerting_system": AlertingSystem(temp_dir),
+        "performance_tracker": get_performance_tracker(temp_dir),
+        "alerting_system": get_alerting_system(temp_dir),
         "drift_detector": DriftDetector(),
+        "backend_enabled": is_database_backend_enabled(),
     }
 
 
