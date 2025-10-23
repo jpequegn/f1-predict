@@ -19,6 +19,9 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 import structlog
 
+# Type aliases for cleaner type hints
+NDArray = np.ndarray[Any, np.dtype[np.floating[Any]]]
+
 logger = structlog.get_logger(__name__)
 
 
@@ -45,7 +48,7 @@ class AnomalyScore:
     explanation: str = ""
     severity: str = "info"  # "info", "warning", "critical"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "timestamp": self.timestamp,
@@ -77,7 +80,7 @@ class HistoricalBaseline:
     n_samples: int
     created_at: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "feature_name": self.feature_name,
@@ -99,7 +102,7 @@ class AnomalyDetector(ABC):
     """Abstract base class for anomaly detectors."""
 
     @abstractmethod
-    def fit(self, data: pd.DataFrame | np.ndarray) -> None:
+    def fit(self, data: pd.DataFrame | NDArray) -> None:
         """Fit the detector to historical data.
 
         Args:
@@ -108,7 +111,7 @@ class AnomalyDetector(ABC):
         pass
 
     @abstractmethod
-    def detect(self, data: pd.DataFrame | np.ndarray, timestamp: float = None) -> AnomalyScore:
+    def detect(self, data: pd.DataFrame | NDArray, timestamp: Optional[float] = None) -> AnomalyScore:
         """Detect anomalies in new data.
 
         Args:
@@ -149,7 +152,7 @@ class IsolationForestDetector(AnomalyDetector):
         self.feature_names: list[str] = []
         self.logger = logger.bind(component="isolation_forest_detector")
 
-    def fit(self, data: pd.DataFrame | np.ndarray) -> None:
+    def fit(self, data: pd.DataFrame | NDArray) -> None:
         """Fit Isolation Forest to data.
 
         Args:
@@ -158,7 +161,7 @@ class IsolationForestDetector(AnomalyDetector):
         try:
             if isinstance(data, pd.DataFrame):
                 self.feature_names = data.columns.tolist()
-                data_array = data.values
+                data_array: NDArray = data.values
             else:
                 data_array = np.asarray(data)
                 # Handle 1D arrays
@@ -195,7 +198,7 @@ class IsolationForestDetector(AnomalyDetector):
             raise
 
     def detect(
-        self, data: pd.DataFrame | np.ndarray, timestamp: float = None
+        self, data: pd.DataFrame | NDArray, timestamp: Optional[float] = None
     ) -> AnomalyScore:
         """Detect anomalies using Isolation Forest.
 
@@ -206,7 +209,7 @@ class IsolationForestDetector(AnomalyDetector):
         Returns:
             AnomalyScore with detection results
         """
-        if self.model is None:
+        if self.model is None or self.scaler is None:
             raise ValueError("Detector not fitted. Call fit() first.")
 
         import time
@@ -286,8 +289,9 @@ class ZScoreDetector(AnomalyDetector):
         self.threshold: float = 0.0
         self.feature_name: str = ""
         self.logger = logger.bind(component="zscore_detector")
+        self._fitted = False
 
-    def fit(self, data: pd.DataFrame | np.ndarray) -> None:
+    def fit(self, data: pd.DataFrame | NDArray) -> None:
         """Calculate mean and std from data.
 
         Args:
@@ -297,19 +301,22 @@ class ZScoreDetector(AnomalyDetector):
             if isinstance(data, pd.DataFrame):
                 if len(data.columns) > 1:
                     self.logger.warning("multiple_features_provided, using first")
-                self.feature_name = data.columns[0]
-                values = data.iloc[:, 0].values
+                self.feature_name = str(data.columns[0])
+                values: NDArray = data.iloc[:, 0].values
             else:
                 values = np.asarray(data).flatten()
                 self.feature_name = "value"
 
-            self.mean = np.mean(values)
-            self.std = np.std(values)
+            mean_val = float(np.mean(values))
+            std_val = float(np.std(values))
 
-            if self.std == 0:
-                self.std = 1.0  # Avoid division by zero
+            if std_val == 0:
+                std_val = 1.0  # Avoid division by zero
 
-            self.threshold = self.threshold_sigma * self.std
+            self.mean = mean_val
+            self.std = std_val
+            self.threshold = self.threshold_sigma * std_val
+            self._fitted = True
 
             self.logger.info(
                 "zscore_detector_fitted",
@@ -323,7 +330,7 @@ class ZScoreDetector(AnomalyDetector):
             raise
 
     def detect(
-        self, data: pd.DataFrame | np.ndarray, timestamp: float = None
+        self, data: pd.DataFrame | NDArray, timestamp: Optional[float] = None
     ) -> AnomalyScore:
         """Detect anomalies using Z-score.
 
@@ -410,8 +417,9 @@ class IQRDetector(AnomalyDetector):
         self.upper_bound: float = 0.0
         self.feature_name: str = ""
         self.logger = logger.bind(component="iqr_detector")
+        self._fitted = False
 
-    def fit(self, data: pd.DataFrame | np.ndarray) -> None:
+    def fit(self, data: pd.DataFrame | NDArray) -> None:
         """Calculate quartiles from data.
 
         Args:
@@ -421,18 +429,22 @@ class IQRDetector(AnomalyDetector):
             if isinstance(data, pd.DataFrame):
                 if len(data.columns) > 1:
                     self.logger.warning("multiple_features_provided, using first")
-                self.feature_name = data.columns[0]
-                values = data.iloc[:, 0].values
+                self.feature_name = str(data.columns[0])
+                values: NDArray = data.iloc[:, 0].values
             else:
                 values = np.asarray(data).flatten()
                 self.feature_name = "value"
 
-            self.q1 = np.percentile(values, 25)
-            self.q3 = np.percentile(values, 75)
-            self.iqr = self.q3 - self.q1
+            q1_val = float(np.percentile(values, 25))
+            q3_val = float(np.percentile(values, 75))
+            iqr_val = q3_val - q1_val
 
-            self.lower_bound = self.q1 - self.iqr_multiplier * self.iqr
-            self.upper_bound = self.q3 + self.iqr_multiplier * self.iqr
+            self.q1 = q1_val
+            self.q3 = q3_val
+            self.iqr = iqr_val
+            self.lower_bound = q1_val - self.iqr_multiplier * iqr_val
+            self.upper_bound = q3_val + self.iqr_multiplier * iqr_val
+            self._fitted = True
 
             self.logger.info(
                 "iqr_detector_fitted",
@@ -448,7 +460,7 @@ class IQRDetector(AnomalyDetector):
             raise
 
     def detect(  # noqa: PLR0912
-        self, data: pd.DataFrame | np.ndarray, timestamp: float = None
+        self, data: pd.DataFrame | NDArray, timestamp: Optional[float] = None
     ) -> AnomalyScore:
         """Detect anomalies using IQR method.
 
@@ -459,7 +471,7 @@ class IQRDetector(AnomalyDetector):
         Returns:
             AnomalyScore with detection results
         """
-        if self.lower_bound is None or self.upper_bound is None:
+        if self.q1 is None or self.q3 is None:
             raise ValueError("Detector not fitted. Call fit() first.")
 
         import time
@@ -523,7 +535,7 @@ class ARIMAForecastDetector(AnomalyDetector):
     Effective for time series with trend and seasonality.
     """
 
-    def __init__(self, order: tuple = (1, 1, 1), deviation_threshold: float = 2.0):
+    def __init__(self, order: tuple[int, int, int] = (1, 1, 1), deviation_threshold: float = 2.0):
         """Initialize ARIMA detector.
 
         Args:
@@ -533,12 +545,12 @@ class ARIMAForecastDetector(AnomalyDetector):
         self.order = order
         self.deviation_threshold = deviation_threshold
         self.model: Optional[Any] = None  # ARIMA model
-        self.residuals: Optional[np.ndarray] = None
+        self.residuals: Optional[NDArray] = None
         self.residual_std: float = 1.0
         self.feature_name: str = ""
         self.logger = logger.bind(component="arima_forecast_detector")
 
-    def fit(self, data: pd.DataFrame | np.ndarray) -> None:
+    def fit(self, data: pd.DataFrame | NDArray) -> None:
         """Fit ARIMA model to data.
 
         Args:
@@ -550,8 +562,8 @@ class ARIMAForecastDetector(AnomalyDetector):
             if isinstance(data, pd.DataFrame):
                 if len(data.columns) > 1:
                     self.logger.warning("multiple_features_provided, using first")
-                self.feature_name = data.columns[0]
-                values = data.iloc[:, 0].values
+                self.feature_name = str(data.columns[0])
+                values: NDArray = data.iloc[:, 0].values
             else:
                 values = np.asarray(data).flatten()
                 self.feature_name = "value"
@@ -582,7 +594,7 @@ class ARIMAForecastDetector(AnomalyDetector):
             raise
 
     def detect(
-        self, data: pd.DataFrame | np.ndarray, timestamp: float = None
+        self, data: pd.DataFrame | NDArray, timestamp: Optional[float] = None
     ) -> AnomalyScore:
         """Detect anomalies using ARIMA forecast deviation.
 
