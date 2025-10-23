@@ -28,7 +28,7 @@ def get_settings_file() -> Path:
     return get_settings_dir() / "settings.json"
 
 
-def get_default_settings() -> dict:
+def get_default_settings() -> dict[str, dict[str, Any]]:
     """Get default settings configuration.
 
     Returns:
@@ -103,7 +103,7 @@ def get_default_settings() -> dict:
 class SettingsManager:
     """Manages application settings with persistence."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize settings manager."""
         self.logger = logger.bind(component="settings_manager")
         self.settings_file = get_settings_file()
@@ -127,7 +127,7 @@ class SettingsManager:
             self.logger.error(f"Error loading settings: {e}")
             self.settings = get_default_settings()
 
-    def _merge_settings(self, defaults: dict, loaded: dict) -> dict:
+    def _merge_settings(self, defaults: dict[str, Any], loaded: dict[str, Any]) -> dict[str, Any]:
         """Merge loaded settings with defaults.
 
         Args:
@@ -161,7 +161,7 @@ class SettingsManager:
             self.logger.error(f"Error getting setting {section}.{key}: {e}")
             return None
 
-    def get_section(self, section: str) -> dict:
+    def get_section(self, section: str) -> dict[str, Any]:
         """Get all settings in a section.
 
         Args:
@@ -170,9 +170,9 @@ class SettingsManager:
         Returns:
             Dictionary of section settings
         """
-        return self.settings.get(section, {})
+        return self.settings.get(section, {}) or {}
 
-    def get_all(self) -> dict:
+    def get_all(self) -> dict[str, Any]:
         """Get all settings.
 
         Returns:
@@ -200,7 +200,7 @@ class SettingsManager:
             self.logger.error(f"Error setting {section}.{key}: {e}")
             return False
 
-    def set_section(self, section: str, values: dict) -> bool:
+    def set_section(self, section: str, values: dict[str, Any]) -> bool:
         """Set multiple settings in a section.
 
         Args:
