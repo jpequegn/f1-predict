@@ -12,7 +12,7 @@ from enum import Enum
 import json
 from pathlib import Path
 import time
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
@@ -26,6 +26,7 @@ from f1_predict.models.anomaly_detection import (
     HistoricalBaseline,
     IQRDetector,
     IsolationForestDetector,
+    NDArray,
     ZScoreDetector,
 )
 
@@ -49,9 +50,9 @@ class DetectorConfig:
     enabled: bool = True
     weight: float = 1.0  # Weight in ensemble (0.0-1.0)
     threshold_strategy: str = ThresholdStrategy.ADAPTIVE_PERCENTILE.value
-    parameters: dict = field(default_factory=dict)
+    parameters: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "method": self.method,
@@ -75,7 +76,7 @@ class AnomalyEvent:
     acknowledged_by: Optional[str] = None
     notes: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "timestamp": self.timestamp,
@@ -164,7 +165,7 @@ class AnomalyDetectionSystem:
         except Exception as e:
             self.logger.error("detector_registration_failed", method=config.method, error=str(e))
 
-    def fit_detectors(self, data: pd.DataFrame | np.ndarray, feature_name: str = None) -> None:
+    def fit_detectors(self, data: pd.DataFrame | NDArray, feature_name: Optional[str] = None) -> None:
         """Fit all registered detectors to baseline data.
 
         Args:
@@ -174,8 +175,8 @@ class AnomalyDetectionSystem:
         try:
             if isinstance(data, pd.DataFrame):
                 if feature_name is None and len(data.columns) > 0:
-                    feature_name = data.columns[0]
-                data_array = data.values
+                    feature_name = str(data.columns[0])
+                data_array: NDArray = data.values
             else:
                 data_array = np.asarray(data)
 
@@ -219,9 +220,9 @@ class AnomalyDetectionSystem:
 
     def detect(
         self,
-        data: pd.DataFrame | np.ndarray,
-        feature_name: str = None,
-        timestamp: float = None,
+        data: pd.DataFrame | NDArray,
+        feature_name: Optional[str] = None,
+        timestamp: Optional[float] = None,
         ensemble: bool = True,
     ) -> Optional[AnomalyEvent]:
         """Detect anomalies using registered detectors.
@@ -332,7 +333,7 @@ class AnomalyDetectionSystem:
             self.logger.error("anomaly_detection_failed", error=str(e))
             return None
 
-    def get_baseline(self, feature_name: str = None) -> Optional[HistoricalBaseline]:
+    def get_baseline(self, feature_name: Optional[str] = None) -> Optional[HistoricalBaseline]:
         """Get baseline statistics for a feature.
 
         Args:
@@ -344,9 +345,11 @@ class AnomalyDetectionSystem:
         if feature_name is None:
             feature_name = list(self.historical_baselines.keys())[0] if self.historical_baselines else None
 
+        if feature_name is None:
+            return None
         return self.historical_baselines.get(feature_name)
 
-    def update_baseline(self, data: pd.DataFrame | np.ndarray, feature_name: str = None) -> None:
+    def update_baseline(self, data: pd.DataFrame | NDArray, feature_name: Optional[str] = None) -> None:
         """Update baseline statistics from new data.
 
         Args:
@@ -356,8 +359,8 @@ class AnomalyDetectionSystem:
         try:
             if isinstance(data, pd.DataFrame):
                 if feature_name is None:
-                    feature_name = data.columns[0] if len(data.columns) > 0 else "unknown"
-                values = data.iloc[:, 0].values if len(data.columns) > 0 else data.values[:, 0]
+                    feature_name = str(data.columns[0]) if len(data.columns) > 0 else "unknown"
+                values: NDArray = data.iloc[:, 0].values if len(data.columns) > 0 else data.values[:, 0]
             else:
                 values = np.asarray(data).flatten()
                 if feature_name is None:
@@ -428,7 +431,7 @@ class AnomalyDetectionSystem:
                 return True
         return False
 
-    def get_statistics(self) -> dict:
+    def get_statistics(self) -> dict[str, Any]:
         """Get anomaly detection statistics.
 
         Returns:
@@ -471,7 +474,7 @@ class AnomalyDetectionSystem:
         """
         if score > 0.8 or len(detectors_triggered) >= 2:
             return "critical"
-        if score > 0.6 or len(detectors_triggered) == 1:
+        elif score > 0.6 or len(detectors_triggered) == 1:
             return "warning"
         return "info"
 
