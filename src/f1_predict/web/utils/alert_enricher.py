@@ -166,7 +166,7 @@ class ExplanabilityAlertEnricher:
             "info": "🟢",
         }.get(alert.severity.lower(), "ℹ️")
 
-        blocks = [
+        blocks: list[dict[str, Any]] = [
             {
                 "type": "header",
                 "text": {

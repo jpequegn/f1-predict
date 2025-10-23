@@ -14,6 +14,9 @@ import numpy as np
 import pandas as pd
 import structlog
 
+# Type aliases
+NDArray = np.ndarray[Any, np.dtype[np.floating[Any]]]
+
 logger = structlog.get_logger(__name__)
 
 
@@ -27,7 +30,7 @@ class FeatureImportance:
     percentage: float
     rank: int
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)
 
@@ -47,7 +50,7 @@ class DriftExplanation:
     confidence: float
     recommendation: str
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)
 
@@ -66,7 +69,7 @@ class PerformanceDegradationAnalysis:
     failure_cohort_size: int
     recommended_actions: list[str]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         data = asdict(self)
         data["top_contributing_features"] = [f.to_dict() for f in self.top_contributing_features]
@@ -107,8 +110,8 @@ class ShapExplainabilityMonitor:
         feature_name: str,
         baseline_data: pd.DataFrame,
         current_data: pd.DataFrame,
-        predictions: np.ndarray,  # noqa: ARG002  # For future use: can analyze prediction patterns
-        shap_values: np.ndarray,
+        predictions: NDArray,  # noqa: ARG002  # For future use: can analyze prediction patterns
+        shap_values: NDArray,
     ) -> DriftExplanation:
         """Explain detected drift using SHAP values.
 
@@ -184,8 +187,8 @@ class ShapExplainabilityMonitor:
         baseline_value: float,
         current_value: float,
         predictions: pd.DataFrame,
-        shap_values: np.ndarray,
-        errors: Optional[np.ndarray] = None,
+        shap_values: NDArray,
+        errors: Optional[NDArray] = None,
     ) -> PerformanceDegradationAnalysis:
         """Analyze root cause of performance degradation using SHAP.
 
@@ -312,7 +315,7 @@ class ShapExplainabilityMonitor:
         self,
         feature_name: str,
         lookback_days: int = 7,  # noqa: ARG002
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Get historical feature importance trend.
 
         Args:
@@ -381,7 +384,7 @@ class ShapExplainabilityMonitor:
         confidence = min(1.0, mean_diff / (baseline_std + 1e-6) * 0.3 + std_diff / (baseline_std + 1e-6) * 0.7)
         return float(confidence)
 
-    def _find_contributing_features(self, shap_values: np.ndarray, primary_feature: str) -> list[str]:  # noqa: ARG002
+    def _find_contributing_features(self, shap_values: NDArray, primary_feature: str) -> list[str]:  # noqa: ARG002
         """Find features contributing to drift."""
         if shap_values is None or len(shap_values) == 0:
             return []
@@ -401,7 +404,7 @@ class ShapExplainabilityMonitor:
         return "Distribution drift detected. Investigate data collection changes."
 
     def _get_top_contributing_features(
-        self, shap_values: np.ndarray, predictions: pd.DataFrame
+        self, shap_values: NDArray, predictions: pd.DataFrame
     ) -> list[FeatureImportance]:
         """Get top contributing features to performance degradation."""
         if shap_values is None or len(shap_values) == 0:
@@ -410,7 +413,7 @@ class ShapExplainabilityMonitor:
         # Calculate mean absolute SHAP values
         mean_shap = np.mean(np.abs(shap_values), axis=0) if len(shap_values.shape) > 1 else np.abs(shap_values)
 
-        feature_importances = []
+        feature_importances: list[FeatureImportance] = []
         n_features = min(len(mean_shap), len(predictions.columns))
 
         for idx in np.argsort(mean_shap)[-n_features:][::-1]:
@@ -431,7 +434,7 @@ class ShapExplainabilityMonitor:
 
         return feature_importances[:5]
 
-    def _analyze_error_cohort(self, error_predictions: pd.DataFrame, error_shap: np.ndarray) -> dict:  # noqa: ARG002
+    def _analyze_error_cohort(self, error_predictions: pd.DataFrame, error_shap: NDArray) -> dict[str, Any]:  # noqa: ARG002
         """Analyze patterns in predictions where model failed."""
         patterns = {
             "n_errors": len(error_predictions),
@@ -449,7 +452,7 @@ class ShapExplainabilityMonitor:
         metric_name: str,
         degradation_percent: float,
         top_features: list[FeatureImportance],
-        error_patterns: dict,
+        error_patterns: dict[str, Any],
     ) -> list[str]:
         """Generate recommendations for addressing performance degradation."""
         recommendations = []
