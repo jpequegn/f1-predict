@@ -1,7 +1,7 @@
-"""Monitoring Dashboard - Real-time model performance and drift detection.
+"""Monitoring Dashboard - Real-time model performance, drift detection, and explainability.
 
 Provides comprehensive visualization of model performance metrics, drift detection,
-alerts, and model comparison across all deployed models.
+alerts, SHAP-based explainability insights, and model comparison across all deployed models.
 """
 
 import tempfile
@@ -18,6 +18,12 @@ from f1_predict.web.utils.monitoring_dashboard import (
     TableFormatters,
     display_dashboard_info_box,
 )
+from f1_predict.web.utils.monitoring_explainability import ShapExplainabilityMonitor
+from f1_predict.web.utils.monitoring_explainability_dashboard import (
+    ExplainabilityChartBuilders,
+    ExplainabilityDataLoaders,
+    ExplainabilityTableFormatters,
+)
 from f1_predict.web.utils.monitoring_factory import (
     get_alerting_system,
     get_performance_tracker,
@@ -27,7 +33,7 @@ from f1_predict.web.utils.monitoring_factory import (
 logger = structlog.get_logger(__name__)
 
 
-@st.cache_resource
+@st.cache_resource  # type: ignore[misc]
 def get_monitoring_systems() -> dict[str, Any]:
     """Get or initialize monitoring systems.
 
@@ -360,6 +366,167 @@ def _display_model_comparison() -> None:
         st.info("⏸ Standby | Last Updated: 2025-10-15 14:22:45")
 
 
+def _display_explainability_dashboard() -> None:
+    """Display explainability dashboard with SHAP insights."""  # noqa: PLR0912,PLR0915,C901
+    st.subheader("🔍 Model Explainability & Insights")
+
+    temp_dir = tempfile.gettempdir()
+
+    # Initialize explainability monitor
+    try:
+        explainability_monitor = ShapExplainabilityMonitor(data_dir=temp_dir)
+    except Exception as e:
+        st.error(f"Failed to initialize explainability monitor: {str(e)}")
+        return
+
+    # Tabs for different explainability views
+    exp_tab1, exp_tab2, exp_tab3 = st.tabs(
+        ["Feature Importance 📊", "Drift Explanation 🔍", "Degradation Analysis 📉"]
+    )
+
+    with exp_tab1:
+        st.markdown("#### Feature Importance Over Time")
+
+        # Feature selection
+        features = list(explainability_monitor.feature_importance_history.keys())
+        if features:
+            selected_feature = st.selectbox("Select Feature", features, key="feature_select")
+
+            # Display feature importance heatmap
+            st.info("📊 Feature importance trends across time periods")
+
+            # Create heatmap
+            importance_history = explainability_monitor.feature_importance_history
+            fig_heatmap = ExplainabilityChartBuilders.create_feature_importance_heatmap(
+                importance_history, limit=10
+            )
+            st.plotly_chart(fig_heatmap, use_container_width=True)
+
+            # Show detailed table for selected feature
+            st.markdown(f"**Detailed Trend for {selected_feature}**")
+            trend_data = explainability_monitor.get_feature_importance_trend(selected_feature)
+            if trend_data:
+                trend_df = pd.DataFrame(trend_data)
+                st.dataframe(trend_df, use_container_width=True)
+            else:
+                display_dashboard_info_box("No Data", f"No importance history for {selected_feature}")
+        else:
+            display_dashboard_info_box(
+                "No Feature Data",
+                "Feature importance data will appear once model predictions are tracked",
+            )
+
+    with exp_tab2:
+        st.markdown("#### Drift Explanation")
+
+        # Load recent drift explanations
+        st.info("🔍 SHAP-based drift explanations with feature attribution")
+
+        recent_drifts = ExplainabilityDataLoaders.load_recent_drift_explanations(
+            explainability_monitor, limit=5
+        )
+
+        if recent_drifts:
+            # Select drift to display
+            drift_options = [f"{d.feature_name} ({d.drift_type})" for d in recent_drifts]
+            selected_idx = st.selectbox(
+                "Select Drift Event", range(len(recent_drifts)), format_func=lambda i: drift_options[i]
+            )
+            selected_drift = recent_drifts[selected_idx]
+
+            # Display drift visualization
+            col1, col2 = st.columns(2)
+
+            with col1:
+                fig_drift = ExplainabilityChartBuilders.create_drift_explanation_chart(
+                    selected_drift
+                )
+                st.plotly_chart(fig_drift, use_container_width=True)
+
+            with col2:
+                st.markdown("**Drift Details**")
+                drift_table = ExplainabilityTableFormatters.format_drift_explanation(selected_drift)
+                st.dataframe(drift_table, use_container_width=True)
+
+            # Contributing features
+            st.markdown("**Contributing Features**")
+            if selected_drift.contributing_features:
+                for feature in selected_drift.contributing_features[:5]:
+                    st.info(f"• {feature}")
+            else:
+                st.info("No contributing features identified")
+        else:
+            display_dashboard_info_box(
+                "No Drift Data",
+                "Drift explanations will appear once drift is detected",
+            )
+
+    with exp_tab3:
+        st.markdown("#### Performance Degradation Analysis")
+
+        # Load degradation analyses
+        st.info("📉 Root cause analysis of performance degradation with SHAP values")
+
+        degradation_analyses = explainability_monitor.get_degradation_analyses(limit=5)
+
+        if degradation_analyses:
+            # Select analysis to display
+            analysis_options = [
+                f"{a.metric_name} ({a.degradation_percent:.1f}% degradation)"
+                for a in degradation_analyses
+            ]
+            selected_idx = st.selectbox(
+                "Select Degradation Event",
+                range(len(degradation_analyses)),
+                format_func=lambda i: analysis_options[i],
+            )
+            selected_analysis = degradation_analyses[selected_idx]
+
+            # Display degradation visualization and analysis
+            col1, col2 = st.columns(2)
+
+            with col1:
+                fig_deg = ExplainabilityChartBuilders.create_degradation_analysis_chart(
+                    selected_analysis
+                )
+                st.plotly_chart(fig_deg, use_container_width=True)
+
+            with col2:
+                st.markdown("**Degradation Details**")
+                deg_table = ExplainabilityTableFormatters.format_degradation_analysis(
+                    selected_analysis
+                )
+                st.dataframe(deg_table, use_container_width=True)
+
+            # Top contributing features
+            st.markdown("**Top Contributing Features**")
+            if selected_analysis.top_contributing_features:
+                top_features_chart = ExplainabilityChartBuilders.create_top_features_chart(
+                    selected_analysis.top_contributing_features[:5]
+                )
+                st.plotly_chart(top_features_chart, use_container_width=True)
+
+                features_table = ExplainabilityTableFormatters.format_feature_importance_table(
+                    selected_analysis.top_contributing_features[:5]
+                )
+                st.dataframe(features_table, use_container_width=True)
+            else:
+                st.info("No contributing features identified")
+
+            # Recommendations
+            st.markdown("**Recommendations**")
+            if selected_analysis.recommended_actions:
+                for i, action in enumerate(selected_analysis.recommended_actions, 1):
+                    st.info(f"{i}. {action}")
+            else:
+                st.info("No specific recommendations available")
+        else:
+            display_dashboard_info_box(
+                "No Degradation Data",
+                "Performance degradation analysis will appear once degradation is detected",
+            )
+
+
 def show_monitoring_page() -> None:
     """Main monitoring dashboard page."""
     st.set_page_config(page_title="Monitoring", page_icon="📊", layout="wide")
@@ -372,11 +539,12 @@ def show_monitoring_page() -> None:
     st.divider()
 
     # Main tabs
-    tab1, tab2, tab3, tab4 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
             "Performance 📊",
             "Drift Detection 🔍",
             "Alerts 🚨",
+            "Explainability 🔬",
             "Model Comparison 📈",
         ]
     )
@@ -391,6 +559,9 @@ def show_monitoring_page() -> None:
         _display_alert_management()
 
     with tab4:
+        _display_explainability_dashboard()
+
+    with tab5:
         _display_model_comparison()
 
     # Footer
