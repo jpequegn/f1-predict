@@ -9,7 +9,7 @@ from f1_predict.web.utils.settings import SettingsManager
 logger = logging.getLogger(__name__)
 
 
-@st.cache_resource
+@st.cache_resource  # type: ignore[misc]
 def get_settings_manager() -> SettingsManager:
     """Get cached settings manager instance."""
     return SettingsManager()
