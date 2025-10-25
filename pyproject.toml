@@ -43,6 +43,7 @@ dependencies = [
     "xgboost>=1.7.0",
     "lightgbm>=4.0.0",
     "shap>=0.43.0",
+    "numba>=0.59.0",  # Ensure binary wheels available for all platforms
 
     # Time series forecasting
     "statsmodels>=0.14.0",
