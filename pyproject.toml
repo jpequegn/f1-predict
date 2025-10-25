@@ -49,8 +49,8 @@ dependencies = [
     "prophet>=1.1.0",
 
     # Deep learning
-    "tensorflow>=2.13.0",
-    "keras>=2.13.0",
+    "torch>=2.0.0",
+    "pytorch-lightning>=2.0.0",
 
     # Web scraping and APIs
     "requests>=2.31.0",
