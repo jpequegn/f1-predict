@@ -49,6 +49,7 @@ dependencies = [
     # Time series forecasting
     "statsmodels>=0.14.0",
     "prophet>=1.1.0",
+    "holidays>=0.80",  # Ensure binary wheels available for all platforms
 
     # Deep learning
     "torch>=2.0.0",
