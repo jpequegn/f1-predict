@@ -7,14 +7,56 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 import structlog
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+import torch
+from torch import nn
 
 from f1_predict.models.time_series_base import NeuralTimeSeriesPredictor
 
 logger = structlog.get_logger(__name__)
+
+
+class LSTMNet(nn.Module):
+    """PyTorch LSTM neural network module."""
+
+    def __init__(self, input_size: int, lstm_units: int, dropout: float, dense_units: int):
+        """Initialize LSTM network.
+
+        Args:
+            input_size: Number of input features
+            lstm_units: Number of LSTM units
+            dropout: Dropout rate
+            dense_units: Units in dense layer
+        """
+        super().__init__()
+        self.lstm1 = nn.LSTM(input_size, lstm_units, batch_first=True)
+        self.dropout1 = nn.Dropout(dropout)
+        self.lstm2 = nn.LSTM(lstm_units, lstm_units // 2, batch_first=True)
+        self.dropout2 = nn.Dropout(dropout)
+        self.dense = nn.Linear(lstm_units // 2, dense_units)
+        self.dropout3 = nn.Dropout(dropout)
+        self.output = nn.Linear(dense_units, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass.
+
+        Args:
+            x: Input tensor
+
+        Returns:
+            Output predictions
+        """
+        lstm_out1, _ = self.lstm1(x)
+        lstm_out1 = self.dropout1(lstm_out1)
+        lstm_out2, _ = self.lstm2(lstm_out1)
+        lstm_out2 = self.dropout2(lstm_out2)
+        # Take last output
+        last_output = lstm_out2[:, -1, :]
+        dense_out = torch.relu(self.dense(last_output))
+        dense_out = self.dropout3(dense_out)
+        output = self.output(dense_out)
+        return output
 
 
 class LSTMPredictor(NeuralTimeSeriesPredictor):
@@ -47,41 +89,28 @@ class LSTMPredictor(NeuralTimeSeriesPredictor):
         self.scaler = None
         self.history = None
         self.attention_weights = None
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.logger = logger.bind(
             component="lstm",
             seq_len=sequence_length,
             lstm_units=lstm_units,
         )
 
-    def _build_model(self, input_shape: tuple[int, ...]) -> keras.Model:
+    def _build_model(self, input_size: int) -> LSTMNet:
         """Build LSTM model architecture.
 
         Args:
-            input_shape: Shape of input data (sequence_length, n_features)
+            input_size: Number of input features
 
         Returns:
-            Compiled Keras model
+            LSTM network
         """
-        model = keras.Sequential(
-            [
-                layers.Input(shape=input_shape),
-                layers.LSTM(self.lstm_units, return_sequences=True, activation="relu"),
-                layers.Dropout(self.dropout),
-                layers.LSTM(self.lstm_units // 2, activation="relu"),
-                layers.Dropout(self.dropout),
-                layers.Dense(self.dense_units, activation="relu"),
-                layers.Dropout(self.dropout),
-                layers.Dense(1),  # Single output for univariate forecasting
-            ]
-        )
-
-        model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=0.001),
-            loss="mse",
-            metrics=["mae"],
-        )
-
-        return model
+        return LSTMNet(
+            input_size=input_size,
+            lstm_units=self.lstm_units,
+            dropout=self.dropout,
+            dense_units=self.dense_units,
+        ).to(self.device)
 
     def fit(
         self, historical_data: pd.DataFrame, target_column: str
@@ -103,8 +132,6 @@ class LSTMPredictor(NeuralTimeSeriesPredictor):
                 raise ValueError(msg)
 
             # Normalize data
-            from sklearn.preprocessing import MinMaxScaler
-
             self.scaler = MinMaxScaler()
             series_scaled = self.scaler.fit_transform(series)
 
@@ -117,21 +144,42 @@ class LSTMPredictor(NeuralTimeSeriesPredictor):
             X = np.array(X)
             y = np.array(y)
 
+            # Convert to tensors
+            X_tensor = torch.FloatTensor(X).to(self.device)
+            y_tensor = torch.FloatTensor(y).reshape(-1, 1).to(self.device)
+
             # Build and train model
-            self.model = self._build_model((self.sequence_length, 1))
-            self.history = self.model.fit(
-                X,
-                y,
-                epochs=50,
-                batch_size=16,
-                validation_split=0.2,
-                verbose=0,
-            )
+            self.model = self._build_model(1)
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+            criterion = nn.MSELoss()
+
+            # Training loop
+            epochs = 50
+            batch_size = 16
+            losses = []
+
+            for _epoch in range(epochs):
+                epoch_loss = 0
+                for i in range(0, len(X_tensor), batch_size):
+                    batch_X = X_tensor[i : i + batch_size]
+                    batch_y = y_tensor[i : i + batch_size]
+
+                    optimizer.zero_grad()
+                    outputs = self.model(batch_X)
+                    loss = criterion(outputs, batch_y)
+                    loss.backward()
+                    optimizer.step()
+
+                    epoch_loss += loss.item()
+
+                losses.append(epoch_loss / (len(X_tensor) // batch_size + 1))
+
+            self.history = {"loss": losses}
 
             self.logger.info(
                 "lstm_trained",
                 n_samples=len(X),
-                final_loss=float(self.history.history["loss"][-1]),
+                final_loss=float(losses[-1]),
             )
             return self
 
@@ -165,8 +213,6 @@ class LSTMPredictor(NeuralTimeSeriesPredictor):
                 raise ValueError(msg)
 
             # Normalize
-            from sklearn.preprocessing import MinMaxScaler
-
             self.scaler = MinMaxScaler()
             data_scaled = self.scaler.fit_transform(data)
 
@@ -179,11 +225,37 @@ class LSTMPredictor(NeuralTimeSeriesPredictor):
             X = np.array(X)
             y = np.array(y)
 
+            # Convert to tensors
+            X_tensor = torch.FloatTensor(X).to(self.device)
+            y_tensor = torch.FloatTensor(y).reshape(-1, 1).to(self.device)
+
             # Build model with multivariate input
-            self.model = self._build_model((self.sequence_length, len(all_cols)))
-            self.history = self.model.fit(
-                X, y, epochs=50, batch_size=16, validation_split=0.2, verbose=0
-            )
+            self.model = self._build_model(len(all_cols))
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+            criterion = nn.MSELoss()
+
+            # Training loop
+            epochs = 50
+            batch_size = 16
+            losses = []
+
+            for _epoch in range(epochs):
+                epoch_loss = 0
+                for i in range(0, len(X_tensor), batch_size):
+                    batch_X = X_tensor[i : i + batch_size]
+                    batch_y = y_tensor[i : i + batch_size]
+
+                    optimizer.zero_grad()
+                    outputs = self.model(batch_X)
+                    loss = criterion(outputs, batch_y)
+                    loss.backward()
+                    optimizer.step()
+
+                    epoch_loss += loss.item()
+
+                losses.append(epoch_loss / (len(X_tensor) // batch_size + 1))
+
+            self.history = {"loss": losses}
 
             self.logger.info("lstm_trained_with_exog", n_features=len(all_cols))
             return self
@@ -208,15 +280,18 @@ class LSTMPredictor(NeuralTimeSeriesPredictor):
             msg = "Model not fitted"
             raise RuntimeError(msg)
 
-        # For neural networks, we'll generate point forecasts
-        # Confidence intervals come from ensemble uncertainty
-        forecast = []
-        current_seq = np.random.randn(1, self.sequence_length, 1)
+        self.model.eval()
+        with torch.no_grad():
+            forecast = []
+            current_seq = torch.randn(1, self.sequence_length, 1).to(self.device)
 
-        for _ in range(steps_ahead):
-            pred = self.model.predict(current_seq, verbose=0)
-            forecast.append(pred[0, 0])
-            current_seq = np.append(current_seq[:, 1:, :], [[[pred[0, 0]]]], axis=1)
+            for _ in range(steps_ahead):
+                pred = self.model(current_seq)
+                forecast.append(pred.item())
+                # Shift sequence and add new prediction
+                current_seq = torch.cat(
+                    [current_seq[:, 1:, :], pred.reshape(1, 1, 1)], dim=1
+                )
 
         forecast = np.array(forecast)
         forecast_scaled = self.scaler.inverse_transform(
@@ -275,6 +350,48 @@ class LSTMPredictor(NeuralTimeSeriesPredictor):
         }
 
 
+class GRUNet(nn.Module):
+    """PyTorch GRU neural network module."""
+
+    def __init__(self, input_size: int, gru_units: int, dropout: float, dense_units: int):
+        """Initialize GRU network.
+
+        Args:
+            input_size: Number of input features
+            gru_units: Number of GRU units
+            dropout: Dropout rate
+            dense_units: Units in dense layer
+        """
+        super().__init__()
+        self.gru1 = nn.GRU(input_size, gru_units, batch_first=True)
+        self.dropout1 = nn.Dropout(dropout)
+        self.gru2 = nn.GRU(gru_units, gru_units // 2, batch_first=True)
+        self.dropout2 = nn.Dropout(dropout)
+        self.dense = nn.Linear(gru_units // 2, dense_units)
+        self.dropout3 = nn.Dropout(dropout)
+        self.output = nn.Linear(dense_units, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass.
+
+        Args:
+            x: Input tensor
+
+        Returns:
+            Output predictions
+        """
+        gru_out1, _ = self.gru1(x)
+        gru_out1 = self.dropout1(gru_out1)
+        gru_out2, _ = self.gru2(gru_out1)
+        gru_out2 = self.dropout2(gru_out2)
+        # Take last output
+        last_output = gru_out2[:, -1, :]
+        dense_out = torch.relu(self.dense(last_output))
+        dense_out = self.dropout3(dense_out)
+        output = self.output(dense_out)
+        return output
+
+
 class GRUPredictor(NeuralTimeSeriesPredictor):
     """GRU (Gated Recurrent Unit) neural network for time series forecasting.
 
@@ -303,41 +420,28 @@ class GRUPredictor(NeuralTimeSeriesPredictor):
         self.model = None
         self.scaler = None
         self.history = None
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.logger = logger.bind(
             component="gru",
             seq_len=sequence_length,
             gru_units=gru_units,
         )
 
-    def _build_model(self, input_shape: tuple[int, ...]) -> keras.Model:
+    def _build_model(self, input_size: int) -> GRUNet:
         """Build GRU model architecture.
 
         Args:
-            input_shape: Input shape
+            input_size: Number of input features
 
         Returns:
-            Compiled model
+            GRU network
         """
-        model = keras.Sequential(
-            [
-                layers.Input(shape=input_shape),
-                layers.GRU(self.gru_units, return_sequences=True, activation="relu"),
-                layers.Dropout(self.dropout),
-                layers.GRU(self.gru_units // 2, activation="relu"),
-                layers.Dropout(self.dropout),
-                layers.Dense(self.dense_units, activation="relu"),
-                layers.Dropout(self.dropout),
-                layers.Dense(1),
-            ]
-        )
-
-        model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=0.001),
-            loss="mse",
-            metrics=["mae"],
-        )
-
-        return model
+        return GRUNet(
+            input_size=input_size,
+            gru_units=self.gru_units,
+            dropout=self.dropout,
+            dense_units=self.dense_units,
+        ).to(self.device)
 
     def fit(
         self, historical_data: pd.DataFrame, target_column: str
@@ -358,8 +462,6 @@ class GRUPredictor(NeuralTimeSeriesPredictor):
                 msg = "Not enough data"
                 raise ValueError(msg)
 
-            from sklearn.preprocessing import MinMaxScaler
-
             self.scaler = MinMaxScaler()
             series_scaled = self.scaler.fit_transform(series)
 
@@ -371,15 +473,41 @@ class GRUPredictor(NeuralTimeSeriesPredictor):
             X = np.array(X)
             y = np.array(y)
 
-            self.model = self._build_model((self.sequence_length, 1))
-            self.history = self.model.fit(
-                X, y, epochs=50, batch_size=16, validation_split=0.2, verbose=0
-            )
+            # Convert to tensors
+            X_tensor = torch.FloatTensor(X).to(self.device)
+            y_tensor = torch.FloatTensor(y).reshape(-1, 1).to(self.device)
+
+            self.model = self._build_model(1)
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+            criterion = nn.MSELoss()
+
+            # Training loop
+            epochs = 50
+            batch_size = 16
+            losses = []
+
+            for _epoch in range(epochs):
+                epoch_loss = 0
+                for i in range(0, len(X_tensor), batch_size):
+                    batch_X = X_tensor[i : i + batch_size]
+                    batch_y = y_tensor[i : i + batch_size]
+
+                    optimizer.zero_grad()
+                    outputs = self.model(batch_X)
+                    loss = criterion(outputs, batch_y)
+                    loss.backward()
+                    optimizer.step()
+
+                    epoch_loss += loss.item()
+
+                losses.append(epoch_loss / (len(X_tensor) // batch_size + 1))
+
+            self.history = {"loss": losses}
 
             self.logger.info(
                 "gru_trained",
                 n_samples=len(X),
-                final_loss=float(self.history.history["loss"][-1]),
+                final_loss=float(losses[-1]),
             )
             return self
 
@@ -410,8 +538,6 @@ class GRUPredictor(NeuralTimeSeriesPredictor):
             msg = "Not enough data"
             raise ValueError(msg)
 
-        from sklearn.preprocessing import MinMaxScaler
-
         self.scaler = MinMaxScaler()
         data_scaled = self.scaler.fit_transform(data)
 
@@ -423,10 +549,36 @@ class GRUPredictor(NeuralTimeSeriesPredictor):
         X = np.array(X)
         y = np.array(y)
 
-        self.model = self._build_model((self.sequence_length, len(all_cols)))
-        self.history = self.model.fit(
-            X, y, epochs=50, batch_size=16, validation_split=0.2, verbose=0
-        )
+        # Convert to tensors
+        X_tensor = torch.FloatTensor(X).to(self.device)
+        y_tensor = torch.FloatTensor(y).reshape(-1, 1).to(self.device)
+
+        self.model = self._build_model(len(all_cols))
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        criterion = nn.MSELoss()
+
+        # Training loop
+        epochs = 50
+        batch_size = 16
+        losses = []
+
+        for _epoch in range(epochs):
+            epoch_loss = 0
+            for i in range(0, len(X_tensor), batch_size):
+                batch_X = X_tensor[i : i + batch_size]
+                batch_y = y_tensor[i : i + batch_size]
+
+                optimizer.zero_grad()
+                outputs = self.model(batch_X)
+                loss = criterion(outputs, batch_y)
+                loss.backward()
+                optimizer.step()
+
+                epoch_loss += loss.item()
+
+            losses.append(epoch_loss / (len(X_tensor) // batch_size + 1))
+
+        self.history = {"loss": losses}
 
         self.logger.info("gru_trained_with_exog", n_features=len(all_cols))
         return self
@@ -447,13 +599,18 @@ class GRUPredictor(NeuralTimeSeriesPredictor):
             msg = "Model not fitted"
             raise RuntimeError(msg)
 
-        forecast = []
-        current_seq = np.random.randn(1, self.sequence_length, 1)
+        self.model.eval()
+        with torch.no_grad():
+            forecast = []
+            current_seq = torch.randn(1, self.sequence_length, 1).to(self.device)
 
-        for _ in range(steps_ahead):
-            pred = self.model.predict(current_seq, verbose=0)
-            forecast.append(pred[0, 0])
-            current_seq = np.append(current_seq[:, 1:, :], [[[pred[0, 0]]]], axis=1)
+            for _ in range(steps_ahead):
+                pred = self.model(current_seq)
+                forecast.append(pred.item())
+                # Shift sequence and add new prediction
+                current_seq = torch.cat(
+                    [current_seq[:, 1:, :], pred.reshape(1, 1, 1)], dim=1
+                )
 
         forecast = np.array(forecast)
         forecast_scaled = self.scaler.inverse_transform(

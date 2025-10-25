@@ -36,6 +36,7 @@ dependencies = [
 
     # Data visualization
     "matplotlib>=3.7.0",
+    "pillow>=10.0.0",  # Ensure binary wheels available for all platforms
     "seaborn>=0.12.0",
     "plotly>=5.15.0",
 
@@ -43,14 +44,16 @@ dependencies = [
     "xgboost>=1.7.0",
     "lightgbm>=4.0.0",
     "shap>=0.43.0",
+    "numba>=0.59.0",  # Ensure binary wheels available for all platforms
 
     # Time series forecasting
     "statsmodels>=0.14.0",
     "prophet>=1.1.0",
+    "holidays>=0.80",  # Ensure binary wheels available for all platforms
 
     # Deep learning
-    "tensorflow>=2.13.0",
-    "keras>=2.13.0",
+    "torch>=2.0.0",
+    "pytorch-lightning>=2.0.0",
 
     # Web scraping and APIs
     "requests>=2.31.0",
