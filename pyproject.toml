@@ -36,6 +36,7 @@ dependencies = [
 
     # Data visualization
     "matplotlib>=3.7.0",
+    "pillow>=10.0.0",  # Ensure binary wheels available for all platforms
     "seaborn>=0.12.0",
     "plotly>=5.15.0",
 
