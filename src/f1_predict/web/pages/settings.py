@@ -127,6 +127,87 @@ def _display_prediction_settings(settings_mgr: SettingsManager) -> None:
         settings_mgr.set("predictions", "export_format_default", export_format)
 
 
+def _display_comparison_settings(settings_mgr: SettingsManager) -> None:
+    """Display comparison settings section."""
+    st.subheader("🏁 Comparison Settings")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        season = st.number_input(
+            "Default Season",
+            min_value=2020,
+            max_value=2050,
+            value=settings_mgr.get("comparisons", "default_season"),
+            help="Default season for comparisons",
+        )
+        is_valid, msg = settings_mgr.validate_setting("comparisons", "default_season", season)
+        if not is_valid:
+            st.error(msg)
+        else:
+            settings_mgr.set("comparisons", "default_season", season)
+
+        races_to_display = st.number_input(
+            "Races to Display",
+            min_value=1,
+            max_value=100,
+            value=settings_mgr.get("comparisons", "races_to_display"),
+            help="Number of races to display in comparisons",
+        )
+        settings_mgr.set("comparisons", "races_to_display", races_to_display)
+
+    with col2:
+        chart_type = st.selectbox(
+            "Default Chart Type",
+            options=["line", "bar", "scatter"],
+            index=["line", "bar", "scatter"].index(
+                settings_mgr.get("comparisons", "default_chart_type")
+            ),
+            help="Default visualization type for comparisons",
+        )
+        settings_mgr.set("comparisons", "default_chart_type", chart_type)
+
+        color_scheme = st.selectbox(
+            "Color Scheme",
+            options=["team", "driver", "gradient"],
+            index=["team", "driver", "gradient"].index(
+                settings_mgr.get("comparisons", "color_scheme")
+            ),
+            help="Color scheme for comparison charts",
+        )
+        settings_mgr.set("comparisons", "color_scheme", color_scheme)
+
+    st.markdown("**Display Options**")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        include_sprints = st.checkbox(
+            "Include Sprint Races",
+            value=settings_mgr.get("comparisons", "include_sprint_races"),
+            help="Include sprint races in comparisons",
+        )
+        settings_mgr.set("comparisons", "include_sprint_races", include_sprints)
+
+    with col2:
+        enable_animation = st.checkbox(
+            "Enable Chart Animation",
+            value=settings_mgr.get("comparisons", "enable_animation"),
+            help="Animate chart transitions",
+        )
+        settings_mgr.set("comparisons", "enable_animation", enable_animation)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        show_trend_lines = st.checkbox(
+            "Show Trend Lines",
+            value=settings_mgr.get("comparisons", "show_trend_lines"),
+            help="Display trend lines in charts",
+        )
+        settings_mgr.set("comparisons", "show_trend_lines", show_trend_lines)
+
+
 def _display_analytics_settings(settings_mgr: SettingsManager) -> None:
     """Display analytics settings section."""
     st.subheader("📊 Analytics Settings")
@@ -360,9 +441,10 @@ def show_settings_page() -> None:
     settings_mgr = get_settings_manager()
 
     # Create tabs for different settings categories
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "General",
         "Predictions",
+        "Comparisons",
         "Analytics",
         "API",
         "Advanced",
@@ -375,12 +457,15 @@ def show_settings_page() -> None:
         _display_prediction_settings(settings_mgr)
 
     with tab3:
-        _display_analytics_settings(settings_mgr)
+        _display_comparison_settings(settings_mgr)
 
     with tab4:
-        _display_api_settings(settings_mgr)
+        _display_analytics_settings(settings_mgr)
 
     with tab5:
+        _display_api_settings(settings_mgr)
+
+    with tab6:
         _display_advanced_settings(settings_mgr)
         st.divider()
         _display_data_management(settings_mgr)

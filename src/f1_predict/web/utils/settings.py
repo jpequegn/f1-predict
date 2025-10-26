@@ -371,6 +371,24 @@ class SettingsManager:
                 if value not in valid_quality:
                     return False, f"Quality must be one of {valid_quality}"
 
+            if section == "comparisons" and key == "default_season":
+                if not 2020 <= value <= 2050:
+                    return False, "Default season must be between 2020 and 2050"
+
+            if section == "comparisons" and key == "races_to_display":
+                if value < 1 or value > 100:
+                    return False, "Races to display must be between 1 and 100"
+
+            if section == "comparisons" and key == "default_chart_type":
+                valid_types = ["line", "bar", "scatter"]
+                if value not in valid_types:
+                    return False, f"Chart type must be one of {valid_types}"
+
+            if section == "comparisons" and key == "color_scheme":
+                valid_schemes = ["team", "driver", "gradient"]
+                if value not in valid_schemes:
+                    return False, f"Color scheme must be one of {valid_schemes}"
+
             return True, ""
 
         except Exception as e:

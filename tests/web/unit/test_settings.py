@@ -357,3 +357,73 @@ class TestSettingsImportExport:
         assert manager.get("general", "theme") == "Light"
         # Should still have defaults for missing keys
         assert manager.get("general", "units") is not None
+
+
+class TestComparisonSettingsValidation:
+    """Tests for comparison settings validation."""
+
+    def test_validate_default_season(self, temp_settings_file):
+        """Test default season validation."""
+        manager = SettingsManager()
+
+        # Valid values
+        assert manager.validate_setting("comparisons", "default_season", 2024)[0]
+        assert manager.validate_setting("comparisons", "default_season", 2020)[0]
+        assert manager.validate_setting("comparisons", "default_season", 2050)[0]
+
+        # Invalid values
+        assert not manager.validate_setting("comparisons", "default_season", 2019)[0]
+        assert not manager.validate_setting("comparisons", "default_season", 2051)[0]
+
+    def test_validate_races_to_display(self, temp_settings_file):
+        """Test races to display validation."""
+        manager = SettingsManager()
+
+        # Valid values
+        assert manager.validate_setting("comparisons", "races_to_display", 1)[0]
+        assert manager.validate_setting("comparisons", "races_to_display", 50)[0]
+        assert manager.validate_setting("comparisons", "races_to_display", 100)[0]
+
+        # Invalid values
+        assert not manager.validate_setting("comparisons", "races_to_display", 0)[0]
+        assert not manager.validate_setting("comparisons", "races_to_display", 101)[0]
+
+    def test_validate_chart_type(self, temp_settings_file):
+        """Test chart type validation."""
+        manager = SettingsManager()
+
+        # Valid values
+        for chart_type in ["line", "bar", "scatter"]:
+            assert manager.validate_setting(
+                "comparisons", "default_chart_type", chart_type
+            )[0]
+
+        # Invalid values
+        assert not manager.validate_setting(
+            "comparisons", "default_chart_type", "pie"
+        )[0]
+
+    def test_validate_color_scheme(self, temp_settings_file):
+        """Test color scheme validation."""
+        manager = SettingsManager()
+
+        # Valid values
+        for scheme in ["team", "driver", "gradient"]:
+            assert manager.validate_setting("comparisons", "color_scheme", scheme)[0]
+
+        # Invalid values
+        assert not manager.validate_setting("comparisons", "color_scheme", "rainbow")[0]
+
+    def test_comparison_settings_persistence(self, temp_settings_file):
+        """Test that comparison settings persist correctly."""
+        manager1 = SettingsManager()
+        manager1.set("comparisons", "default_season", 2023)
+        manager1.set("comparisons", "races_to_display", 15)
+        manager1.set("comparisons", "default_chart_type", "bar")
+        manager1.save()
+
+        # Load in new manager instance
+        manager2 = SettingsManager()
+        assert manager2.get("comparisons", "default_season") == 2023
+        assert manager2.get("comparisons", "races_to_display") == 15
+        assert manager2.get("comparisons", "default_chart_type") == "bar"
