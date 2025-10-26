@@ -1,6 +1,7 @@
 """Multivariate anomaly detection using Isolation Forest."""
 
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
@@ -69,7 +70,7 @@ class MultivariateAnalyzer:
         # Initialize components (created during fit)
         self._model: IsolationForest | None = None
         self._scaler: StandardScaler | None = None
-        self._feature_columns: list[str] | None = None
+        self._feature_columns: list[str] = []
 
         self.logger = logger.bind(
             component="multivariate_analyzer",
@@ -174,6 +175,10 @@ class MultivariateAnalyzer:
                 "Call fit() first."
             )
 
+        # Type guards: ensure model and scaler are initialized
+        assert self._model is not None, "Model should be fitted"
+        assert self._scaler is not None, "Scaler should be fitted"
+
         # Create copy to avoid modifying input
         result = df.copy()
 
@@ -184,9 +189,9 @@ class MultivariateAnalyzer:
 
         # Get numeric columns that were used in training
         try:
-            numeric_df = df[self._feature_columns]  # type: ignore
+            numeric_df = df[self._feature_columns]
         except KeyError as e:
-            missing_cols = set(self._feature_columns or []) - set(df.columns)  # type: ignore
+            missing_cols = set(self._feature_columns) - set(df.columns)
             raise ValueError(
                 f"DataFrame missing columns used in training: {missing_cols}"
             ) from e
@@ -195,14 +200,14 @@ class MultivariateAnalyzer:
         numeric_df_filled = numeric_df.fillna(numeric_df.mean())
 
         # Scale features
-        scaled_data = self._scaler.transform(numeric_df_filled)  # type: ignore
+        scaled_data = self._scaler.transform(numeric_df_filled)
 
         # Predict anomalies (-1 for anomaly, 1 for normal)
-        predictions = self._model.predict(scaled_data)  # type: ignore
+        predictions = self._model.predict(scaled_data)
         result["anomaly_flag"] = predictions == -1
 
         # Get anomaly scores (more negative = more anomalous)
-        raw_scores = self._model.score_samples(scaled_data)  # type: ignore
+        raw_scores = self._model.score_samples(scaled_data)
 
         # Normalize scores to 0-1 range
         # Isolation Forest scores are negative, more negative = more anomalous
@@ -222,7 +227,9 @@ class MultivariateAnalyzer:
 
         return result
 
-    def _normalize_scores(self, scores: np.ndarray) -> np.ndarray:
+    def _normalize_scores(
+        self, scores: NDArray[np.floating]
+    ) -> NDArray[np.floating]:
         """Normalize Isolation Forest scores to 0-1 range.
 
         Isolation Forest returns negative scores where more negative values
@@ -242,18 +249,18 @@ class MultivariateAnalyzer:
         """
         # Handle edge case: all scores identical
         if len(scores) == 0:
-            return np.array([])
+            return np.array([], dtype=np.float64)
 
         min_score = scores.min()
         max_score = scores.max()
 
         # If all scores are the same, return zeros
         if max_score == min_score:
-            return np.zeros_like(scores)
+            return np.zeros_like(scores, dtype=np.float64)
 
         # Normalize to 0-1 range
         # More negative scores (anomalies) will be closer to 1
         normalized = (scores - min_score) / (max_score - min_score)
 
         # Invert so that anomalies (low scores) get high normalized values
-        return 1.0 - normalized
+        return np.asarray(1.0 - normalized, dtype=np.float64)
