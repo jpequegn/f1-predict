@@ -102,3 +102,51 @@ def test_on_data_stored_handles_errors():
     result = hooks.on_data_stored([], season=2024)
     assert "anomalies" in result
     assert "summary" in result
+
+
+def test_multivariate_analyzer_initialized():
+    """Test that multivariate analyzer is properly initialized."""
+    hooks = AnomalyDetectionHooks()
+
+    assert hooks.multivariate_analyzer is not None
+    assert hasattr(hooks.multivariate_analyzer, "fit")
+    assert hasattr(hooks.multivariate_analyzer, "detect")
+    assert hasattr(hooks.multivariate_analyzer, "is_fitted")
+
+
+def test_on_data_stored_uses_multivariate_analyzer():
+    """Test on_data_stored uses multivariate analyzer for detection."""
+    hooks = AnomalyDetectionHooks()
+
+    # Create realistic F1 data with some outliers
+    data = [
+        {"position": 1, "points": 25, "lap_time": 90.5},
+        {"position": 2, "points": 18, "lap_time": 91.0},
+        {"position": 3, "points": 15, "lap_time": 90.8},
+        {"position": 4, "points": 12, "lap_time": 91.2},
+        {"position": 5, "points": 10, "lap_time": 90.9},
+        {"position": 6, "points": 8, "lap_time": 91.1},
+        {"position": 7, "points": 6, "lap_time": 90.7},
+        {"position": 8, "points": 4, "lap_time": 90.6},
+        {"position": 9, "points": 2, "lap_time": 91.3},
+        {"position": 10, "points": 1, "lap_time": 90.4},
+        # Outlier - unrealistic performance
+        {"position": 20, "points": 100, "lap_time": 200.0},
+    ]
+
+    report = hooks.on_data_stored(data, season=2024)
+
+    # Verify report structure
+    assert "anomalies" in report
+    assert "summary" in report
+    assert isinstance(report["anomalies"], list)
+
+    # Verify summary contains expected keys
+    summary = report["summary"]
+    assert "total" in summary
+    assert "critical" in summary
+    assert "total_records" in summary
+    assert "anomaly_rate" in summary
+
+    # Verify multivariate analyzer was fitted
+    assert hooks.multivariate_analyzer.is_fitted is True

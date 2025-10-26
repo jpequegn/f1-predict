@@ -1,6 +1,5 @@
 """Univariate anomaly detection using Z-score and IQR methods."""
 
-
 import numpy as np
 import pandas as pd
 import structlog

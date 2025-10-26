@@ -6,9 +6,13 @@ from typing import Any
 import pandas as pd
 import structlog
 
+from f1_predict.data.multivariate_analyzer import MultivariateAnalyzer
 from f1_predict.data.univariate_detector import UnivariateDetector
 
 logger = structlog.get_logger(__name__)
+
+# Threshold for critical anomaly detection
+CRITICAL_ANOMALY_THRESHOLD = 0.8
 
 
 @dataclass
@@ -42,8 +46,8 @@ class AnomalyDetectionHooks:
         self.logger = logger.bind(component="anomaly_hooks")
         # Initialize univariate detector for fast checks during collection
         self.univariate_detector = UnivariateDetector()
-        # Multivariate analyzer will be initialized in later tasks
-        self.multivariate_analyzer = None
+        # Initialize multivariate analyzer for sophisticated post-storage analysis
+        self.multivariate_analyzer = MultivariateAnalyzer()
         self.registry = None
 
     def on_data_collected(self, data: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -99,18 +103,69 @@ class AnomalyDetectionHooks:
     def on_data_stored(self, data: list[dict[str, Any]], season: int) -> dict[str, Any]:
         """Hook: Run sophisticated analysis post-storage.
 
+        Uses MultivariateAnalyzer to detect complex multivariate patterns
+        that univariate methods miss. Fits on historical data first if not
+        already fitted.
+
         Args:
             data: Stored data records
             season: F1 season
 
         Returns:
-            Anomaly report
+            Anomaly report with detected anomalies and summary statistics
         """
         try:
+            if not data:
+                return {
+                    "anomalies": [],
+                    "summary": {"total": 0, "critical": 0},
+                }
+
+            # Convert to DataFrame for multivariate analysis
+            df = pd.DataFrame(data)
+
+            # Fit analyzer on the data if not already fitted
+            # In production, you'd fit on clean historical data separately
+            if not self.multivariate_analyzer.is_fitted:
+                self.logger.info(
+                    "fitting_multivariate_analyzer",
+                    season=season,
+                    data_count=len(df),
+                )
+                self.multivariate_analyzer.fit(df)
+
+            # Detect anomalies
+            df_with_anomalies = self.multivariate_analyzer.detect(df)
+
+            # Extract anomaly records
+            anomaly_rows = df_with_anomalies[df_with_anomalies["anomaly_flag"]]
+            anomalies = anomaly_rows.to_dict("records")
+
+            # Calculate summary statistics
+            total_anomalies = len(anomalies)
+            # Consider anomalies with score > threshold as "critical"
+            critical_anomalies = len(
+                anomaly_rows[anomaly_rows["anomaly_score"] > CRITICAL_ANOMALY_THRESHOLD]
+            )
+
+            self.logger.info(
+                "multivariate_analysis_complete",
+                season=season,
+                data_count=len(df),
+                total_anomalies=total_anomalies,
+                critical_anomalies=critical_anomalies,
+            )
+
             return {
-                "anomalies": [],
-                "summary": {"total": 0, "critical": 0},
+                "anomalies": anomalies,
+                "summary": {
+                    "total": total_anomalies,
+                    "critical": critical_anomalies,
+                    "total_records": len(df),
+                    "anomaly_rate": total_anomalies / len(df) if len(df) > 0 else 0,
+                },
             }
+
         except Exception as e:
             self.logger.error(
                 "error_in_data_storage_hook",
