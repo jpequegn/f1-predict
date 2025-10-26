@@ -1,10 +1,11 @@
 """Anomaly detection registry for persistence and querying."""
 
-import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
+import json
 from pathlib import Path
 from typing import Any, Optional
+from uuid import uuid4
 
 import structlog
 
@@ -24,7 +25,7 @@ class AnomalyRecord:
     severity: str
     explanation: str = ""
     timestamp: datetime = field(default_factory=lambda: datetime.now(tz=timezone.utc))
-    id: str = field(default_factory=lambda: datetime.now(tz=timezone.utc).isoformat())
+    id: str = field(default_factory=lambda: str(uuid4()))
 
     def to_dict(self) -> dict[str, Any]:
         """Convert record to dictionary for serialization.
@@ -67,15 +68,18 @@ class AnomalyRegistry:
         >>> critical = registry.get_anomalies(severity="critical")
     """
 
-    def __init__(self, storage_dir: str) -> None:
+    def __init__(self, storage_dir: str, fail_on_error: bool = False) -> None:
         """Initialize anomaly registry.
 
         Args:
             storage_dir: Directory path for storing anomaly data
+            fail_on_error: If True, raise exceptions on save/load errors.
+                          If False, log errors and continue gracefully.
         """
         self.storage_dir = Path(storage_dir)
         self.anomalies: list[AnomalyRecord] = []
         self.logger = logger.bind(component="anomaly_registry")
+        self.fail_on_error = fail_on_error
 
         # Create storage directory if it doesn't exist
         self.storage_dir.mkdir(parents=True, exist_ok=True)
@@ -85,7 +89,20 @@ class AnomalyRegistry:
 
         Args:
             record: AnomalyRecord instance to add
+
+        Raises:
+            TypeError: If record is not an AnomalyRecord instance
+            ValueError: If anomaly_score is not in valid range [0, 1]
         """
+        if not isinstance(record, AnomalyRecord):
+            msg = f"Expected AnomalyRecord, got {type(record).__name__}"  # type: ignore[unreachable]
+            raise TypeError(msg)
+
+        # Type guard: isinstance check above ensures record is AnomalyRecord
+        if not 0.0 <= record.anomaly_score <= 1.0:
+            msg = f"Anomaly score must be in [0, 1], got {record.anomaly_score}"
+            raise ValueError(msg)
+
         self.anomalies.append(record)
         self.logger.debug(
             "anomaly_added",
@@ -169,8 +186,14 @@ class AnomalyRegistry:
         """Save anomaly registry to JSON file.
 
         Persists all anomalies to a JSON file in the storage directory.
+        Uses atomic writes to prevent file corruption on write failures.
+
+        Raises:
+            Exception: If fail_on_error is True and write fails
         """
         try:
+            from tempfile import NamedTemporaryFile
+
             output_file = self.storage_dir / "anomalies.json"
 
             # Convert records to dictionaries for JSON serialization
@@ -180,9 +203,18 @@ class AnomalyRegistry:
                 "total": len(self.anomalies),
             }
 
-            # Write with pretty formatting
-            with open(output_file, "w") as f:
-                json.dump(data, f, indent=2)
+            # Atomic write: write to temp file first, then rename
+            with NamedTemporaryFile(
+                mode="w",
+                dir=self.storage_dir,
+                delete=False,
+                suffix=".tmp",
+            ) as tmp:
+                json.dump(data, tmp, indent=2)
+                tmp_path = Path(tmp.name)
+
+            # Atomic rename replaces existing file atomically
+            tmp_path.replace(output_file)
 
             self.logger.info(
                 "registry_saved",
@@ -196,13 +228,21 @@ class AnomalyRegistry:
                 error=str(e),
                 exc_info=True,
             )
-            raise
+            # Clean up temp file if it exists
+            if "tmp_path" in locals():
+                tmp_path.unlink(missing_ok=True)
+            if self.fail_on_error:
+                raise
 
     def load(self) -> None:
         """Load anomaly registry from JSON file.
 
         Loads all anomalies from the JSON file in the storage directory.
-        If file doesn't exist, registry remains empty.
+        If file doesn't exist, registry remains empty. Corrupted individual
+        records are skipped with a warning.
+
+        Raises:
+            Exception: If fail_on_error is True and any error occurs
         """
         try:
             input_file = self.storage_dir / "anomalies.json"
@@ -214,15 +254,27 @@ class AnomalyRegistry:
             with open(input_file) as f:
                 data = json.load(f)
 
-            # Load anomalies from JSON data
-            self.anomalies = [
-                AnomalyRecord.from_dict(record) for record in data.get("anomalies", [])
-            ]
+            # Load anomalies with per-record error handling
+            loaded: list[AnomalyRecord] = []
+            skipped = 0
+            for record_data in data.get("anomalies", []):
+                try:
+                    loaded.append(AnomalyRecord.from_dict(record_data))
+                except Exception as e:  # noqa: BLE001
+                    skipped += 1
+                    self.logger.warning(
+                        "skipping_invalid_record",
+                        record=record_data,
+                        error=str(e),
+                    )
+
+            self.anomalies = loaded
 
             self.logger.info(
                 "registry_loaded",
                 file=str(input_file),
                 total_anomalies=len(self.anomalies),
+                skipped_records=skipped,
             )
 
         except Exception as e:
@@ -231,7 +283,8 @@ class AnomalyRegistry:
                 error=str(e),
                 exc_info=True,
             )
-            raise
+            if self.fail_on_error:
+                raise
 
     def clear(self) -> None:
         """Clear all anomalies from the registry.
