@@ -41,13 +41,15 @@ class AnomalyMetadata:
 class AnomalyDetectionHooks:
     """Pluggable hooks for anomaly detection in data pipeline."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize anomaly detection hooks."""
         self.logger = logger.bind(component="anomaly_hooks")
         # Initialize univariate detector for fast checks during collection
         self.univariate_detector = UnivariateDetector()
         # Initialize multivariate analyzer for sophisticated post-storage analysis
         self.multivariate_analyzer = MultivariateAnalyzer()
+        # Will be set by collector if available
+        self.race_detector = None
         self.registry = None
 
     def on_data_collected(self, data: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -70,7 +72,7 @@ class AnomalyDetectionHooks:
             df_with_anomalies = self.univariate_detector.detect(df)
 
             # Convert back to list of dicts
-            result = df_with_anomalies.to_dict("records")
+            result: list[dict[str, Any]] = df_with_anomalies.to_dict("records")
 
             # Add structured anomaly metadata to each record
             for record in result:
