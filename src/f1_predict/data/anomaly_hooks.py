@@ -3,7 +3,10 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+import pandas as pd
 import structlog
+
+from f1_predict.data.univariate_detector import UnivariateDetector
 
 logger = structlog.get_logger(__name__)
 
@@ -37,8 +40,9 @@ class AnomalyDetectionHooks:
     def __init__(self):
         """Initialize anomaly detection hooks."""
         self.logger = logger.bind(component="anomaly_hooks")
-        # Will be initialized when detectors are available
-        self.univariate_detector = None
+        # Initialize univariate detector for fast checks during collection
+        self.univariate_detector = UnivariateDetector()
+        # Multivariate analyzer will be initialized in later tasks
         self.multivariate_analyzer = None
         self.registry = None
 
@@ -52,10 +56,37 @@ class AnomalyDetectionHooks:
             Data with anomaly flags added
         """
         try:
-            # Add anomaly metadata to each record
-            for record in data:
-                record["_anomaly"] = AnomalyMetadata().to_dict()
-            return data
+            if not data:
+                return data
+
+            # Convert to DataFrame for univariate detection
+            df = pd.DataFrame(data)
+
+            # Run univariate anomaly detection
+            df_with_anomalies = self.univariate_detector.detect(df)
+
+            # Convert back to list of dicts
+            result = df_with_anomalies.to_dict("records")
+
+            # Add structured anomaly metadata to each record
+            for record in result:
+                # Create AnomalyMetadata from detection results
+                record["_anomaly"] = AnomalyMetadata(
+                    anomaly_flag=record.get("anomaly_flag", False),
+                    anomaly_score=record.get("anomaly_score", 0.0),
+                    anomaly_method=record.get("anomaly_method", ""),
+                    anomaly_confidence=record.get("anomaly_confidence", 0.0),
+                ).to_dict()
+
+            self.logger.debug(
+                "on_data_collected_complete",
+                data_count=len(result),
+                anomalies_detected=sum(
+                    1 for r in result if r.get("anomaly_flag", False)
+                ),
+            )
+
+            return result
         except Exception as e:
             self.logger.error(
                 "error_in_data_collection_hook",
