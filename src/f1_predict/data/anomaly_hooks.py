@@ -22,12 +22,12 @@ class AnomalyMetadata:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
-            'anomaly_flag': self.anomaly_flag,
-            'anomaly_score': self.anomaly_score,
-            'anomaly_method': self.anomaly_method,
-            'anomaly_confidence': self.anomaly_confidence,
-            'features_involved': self.features_involved,
-            'explanation': self.explanation,
+            "anomaly_flag": self.anomaly_flag,
+            "anomaly_score": self.anomaly_score,
+            "anomaly_method": self.anomaly_method,
+            "anomaly_confidence": self.anomaly_confidence,
+            "features_involved": self.features_involved,
+            "explanation": self.explanation,
         }
 
 
@@ -54,15 +54,18 @@ class AnomalyDetectionHooks:
         try:
             # Add anomaly metadata to each record
             for record in data:
-                record['_anomaly'] = AnomalyMetadata().to_dict()
+                record["_anomaly"] = AnomalyMetadata().to_dict()
             return data
         except Exception as e:
-            self.logger.error(f"Error in on_data_collected: {e}")
+            self.logger.error(
+                "error_in_data_collection_hook",
+                error=str(e),
+                data_count=len(data),
+                exc_info=True,
+            )
             return data
 
-    def on_data_stored(
-        self, data: list[dict[str, Any]], season: int
-    ) -> dict[str, Any]:
+    def on_data_stored(self, data: list[dict[str, Any]], season: int) -> dict[str, Any]:
         """Hook: Run sophisticated analysis post-storage.
 
         Args:
@@ -74,9 +77,15 @@ class AnomalyDetectionHooks:
         """
         try:
             return {
-                'anomalies': [],
-                'summary': {'total': 0, 'critical': 0},
+                "anomalies": [],
+                "summary": {"total": 0, "critical": 0},
             }
         except Exception as e:
-            self.logger.error(f"Error in on_data_stored: {e}")
-            return {'anomalies': [], 'summary': {}}
+            self.logger.error(
+                "error_in_data_storage_hook",
+                error=str(e),
+                data_count=len(data),
+                season=season,
+                exc_info=True,
+            )
+            return {"anomalies": [], "summary": {}}
