@@ -9,8 +9,10 @@ import traceback
 from typing import Any
 
 from f1_predict import logging_config
+from f1_predict.data.anomaly_registry import AnomalyRecord, AnomalyRegistry
 from f1_predict.data.cleaning import DataCleaner, DataQualityValidator
 from f1_predict.data.collector import F1DataCollector
+from f1_predict.data.race_anomaly_detector import RaceAnomalyDetector
 from f1_predict.features.engineering import FeatureEngineer
 from f1_predict.metrics.performance import PerformanceMetricsCalculator
 
@@ -21,8 +23,48 @@ def setup_logging(verbose: bool = False) -> None:
     Args:
         verbose: Enable verbose logging
     """
-    level = logging.DEBUG if verbose else logging.INFO
-    logging_config.setup_logging(level=level)
+    level_str = "DEBUG" if verbose else "INFO"
+    logging_config.configure_logging(log_level=level_str)
+
+
+def _calculate_anomaly_severity(anomaly_score: float) -> str:
+    """Calculate severity level from anomaly score.
+
+    Args:
+        anomaly_score: Anomaly score between 0 and 1
+
+    Returns:
+        Severity level: "critical", "warning", or "info"
+    """
+    if anomaly_score > 0.8:
+        return "critical"
+    if anomaly_score > 0.6:
+        return "warning"
+    return "info"
+
+
+def _filter_anomalies(
+    anomalies: list[Any], driver_id: int | None = None, severity: str | None = None
+) -> list[Any]:
+    """Filter anomalies by driver ID and severity.
+
+    Args:
+        anomalies: List of anomaly records
+        driver_id: Driver ID to filter by (optional)
+        severity: Severity level to filter by (optional)
+
+    Returns:
+        Filtered list of anomaly records
+    """
+    results = anomalies
+
+    if driver_id is not None:
+        results = [a for a in results if a.driver_id == driver_id]
+
+    if severity is not None:
+        results = [a for a in results if a.severity == severity]
+
+    return results
 
 
 def collect_data(args: argparse.Namespace) -> None:
@@ -507,7 +549,7 @@ def generate_features(args: argparse.Namespace) -> None:
             race_results_file = data_dir / "raw" / "race_results.json"
             if not race_results_file.exists():
                 logger.error(
-                    f"Race results not found. Run 'f1-predict collect' first."
+                    "Race results not found. Run 'f1-predict collect' first."
                 )
                 sys.exit(1)
 
@@ -520,7 +562,7 @@ def generate_features(args: argparse.Namespace) -> None:
             qualifying_file = data_dir / "raw" / "qualifying_results.json"
             if not qualifying_file.exists():
                 logger.error(
-                    f"Qualifying results not found. Run 'f1-predict collect' first."
+                    "Qualifying results not found. Run 'f1-predict collect' first."
                 )
                 sys.exit(1)
 
@@ -658,6 +700,198 @@ def calculate_metrics(args: argparse.Namespace) -> None:
 
     except Exception as e:
         logger.error(f"Metrics calculation failed: {e}")
+        if args.verbose:
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def detect_anomalies(args: argparse.Namespace) -> None:
+    """Detect anomalies in F1 race data.
+
+    Args:
+        args: Command line arguments
+    """
+    setup_logging(args.verbose)
+    logger = logging.getLogger(__name__)
+
+    try:
+        data_dir = Path(args.data_dir)
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info(f"Loading race results from {data_dir}")
+        race_file = data_dir / "raw" / "race_results.csv"
+
+        if not race_file.exists():
+            logger.error(f"Race results file not found: {race_file}")
+            sys.exit(1)
+
+        import pandas as pd
+
+        df = pd.read_csv(race_file)
+        logger.info(f"Loaded {len(df)} race results")
+
+        # Detect anomalies using RaceAnomalyDetector
+        detector = RaceAnomalyDetector()
+        df_with_anomalies = detector.detect(df)
+
+        # Create registry for anomalies
+        registry_dir = output_dir / "anomalies"
+        registry = AnomalyRegistry(str(registry_dir), fail_on_error=False)
+
+        # Store anomalies in registry
+        anomaly_count = 0
+        severity_filter = args.severity if hasattr(args, "severity") else None
+
+        for _idx, row in df_with_anomalies[df_with_anomalies["anomaly_flag"]].iterrows():
+            anomaly_severity = _calculate_anomaly_severity(float(row.get("anomaly_score", 0.0)))
+
+            if severity_filter and anomaly_severity != severity_filter:
+                continue
+
+            record = AnomalyRecord(
+                season=int(row.get("season", 0)),
+                race_round=int(row.get("round", 0)),
+                driver_id=int(row.get("driver_id", 0)),
+                driver_name=str(row.get("driver_name", "Unknown")),
+                anomaly_type=str(row.get("anomaly_method", "unknown")),
+                anomaly_score=float(row.get("anomaly_score", 0.0)),
+                severity=anomaly_severity,
+            )
+            registry.add_anomaly(record)
+            anomaly_count += 1
+
+        registry.save()
+
+        logger.info(f"Detected {anomaly_count} anomalies and saved to {registry_dir}")
+        print(f"✓ Anomaly detection complete: {anomaly_count} anomalies found")
+
+    except Exception as e:
+        logger.error(f"Anomaly detection failed: {e}")
+        if args.verbose:
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def analyze_registry(args: argparse.Namespace) -> None:
+    """Analyze anomaly registry and display statistics.
+
+    Args:
+        args: Command line arguments
+    """
+    setup_logging(args.verbose)
+    logger = logging.getLogger(__name__)
+
+    try:
+        registry_dir = Path(args.registry_dir)
+
+        if not registry_dir.exists():
+            logger.error(f"Registry directory not found: {registry_dir}")
+            sys.exit(1)
+
+        # Load registry
+        registry = AnomalyRegistry(str(registry_dir))
+        registry.load()
+
+        # Get summary
+        summary = registry.get_summary()
+
+        # Apply filters if specified
+        driver_id = int(args.filter_driver) if hasattr(args, "filter_driver") and args.filter_driver else None
+        severity = args.filter_severity if hasattr(args, "filter_severity") and args.filter_severity else None
+        anomalies = _filter_anomalies(registry.anomalies, driver_id=driver_id, severity=severity)
+
+        # Display results
+        print("\n" + "=" * 80)
+        print("ANOMALY REGISTRY ANALYSIS")
+        print("=" * 80)
+        print(f"\nTotal Anomalies: {summary['total_anomalies']}")
+        print("\nBy Severity:")
+        for severity, count in summary.get("by_severity", {}).items():
+            print(f"  - {severity}: {count}")
+        print("\nBy Type:")
+        for atype, count in summary.get("by_type", {}).items():
+            print(f"  - {atype}: {count}")
+
+        if len(anomalies) > 0:
+            print(f"\nFiltered Results ({len(anomalies)} anomalies):")
+            for record in anomalies[:10]:  # Show first 10
+                print(f"  - S{record.season}R{record.race_round}: {record.driver_name} "
+                      f"({record.anomaly_type}, score={record.anomaly_score:.2f})")
+            if len(anomalies) > 10:
+                print(f"  ... and {len(anomalies) - 10} more")
+
+        print("=" * 80 + "\n")
+
+    except Exception as e:
+        logger.error(f"Registry analysis failed: {e}")
+        if args.verbose:
+            traceback.print_exc()
+        sys.exit(1)
+
+
+def export_anomalies(args: argparse.Namespace) -> None:
+    """Export anomalies to CSV or JSON format.
+
+    Args:
+        args: Command line arguments
+    """
+    setup_logging(args.verbose)
+    logger = logging.getLogger(__name__)
+
+    try:
+        registry_dir = Path(args.registry_dir)
+        output_dir = Path(args.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        export_format = args.format if hasattr(args, "format") else "json"
+
+        if not registry_dir.exists():
+            logger.error(f"Registry directory not found: {registry_dir}")
+            sys.exit(1)
+
+        # Load registry
+        registry = AnomalyRegistry(str(registry_dir))
+        registry.load()
+
+        if export_format == "json":
+            output_file = output_dir / "anomalies.json"
+            data = {
+                "anomalies": [r.to_dict() for r in registry.anomalies],
+                "summary": registry.get_summary(),
+            }
+            with open(output_file, "w") as f:
+                json.dump(data, f, indent=2, default=str)
+            logger.info(f"Exported {len(registry.anomalies)} anomalies to {output_file}")
+
+        elif export_format == "csv":
+            import pandas as pd
+
+            output_file = output_dir / "anomalies.csv"
+            records = []
+            for record in registry.anomalies:
+                records.append({
+                    "season": record.season,
+                    "race_round": record.race_round,
+                    "driver_id": record.driver_id,
+                    "driver_name": record.driver_name,
+                    "anomaly_type": record.anomaly_type,
+                    "anomaly_score": record.anomaly_score,
+                    "severity": record.severity,
+                    "explanation": record.explanation,
+                    "timestamp": record.timestamp.isoformat(),
+                })
+            df = pd.DataFrame(records)
+            df.to_csv(output_file, index=False)
+            logger.info(f"Exported {len(registry.anomalies)} anomalies to {output_file}")
+
+        else:
+            logger.error(f"Unsupported export format: {export_format}")
+            sys.exit(1)
+
+        print(f"✓ Exported {len(registry.anomalies)} anomalies to {output_dir}")
+
+    except Exception as e:
+        logger.error(f"Anomaly export failed: {e}")
         if args.verbose:
             traceback.print_exc()
         sys.exit(1)
@@ -850,6 +1084,90 @@ Examples:
         help="Enable verbose output with detailed progress information",
     )
     metrics_parser.set_defaults(func=calculate_metrics)
+
+    # Detect anomalies command
+    detect_parser = subparsers.add_parser(
+        "detect-anomalies",
+        help="Detect anomalies in F1 race data",
+    )
+    detect_parser.add_argument(
+        "--data-dir",
+        default="data",
+        help="Input data directory (default: data)",
+    )
+    detect_parser.add_argument(
+        "--output-dir",
+        default="data",
+        help="Output directory for anomaly registry (default: data)",
+    )
+    detect_parser.add_argument(
+        "--severity",
+        choices=["info", "warning", "critical"],
+        help="Filter results by severity level (optional)",
+    )
+    detect_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output",
+    )
+    detect_parser.set_defaults(func=detect_anomalies)
+
+    # Analyze registry command
+    analyze_parser = subparsers.add_parser(
+        "analyze-registry",
+        help="Analyze anomaly registry and display statistics",
+    )
+    analyze_parser.add_argument(
+        "--registry-dir",
+        default="data/anomalies",
+        help="Anomaly registry directory (default: data/anomalies)",
+    )
+    analyze_parser.add_argument(
+        "--filter-driver",
+        help="Filter by driver ID (optional)",
+    )
+    analyze_parser.add_argument(
+        "--filter-severity",
+        choices=["info", "warning", "critical"],
+        help="Filter by severity level (optional)",
+    )
+    analyze_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output",
+    )
+    analyze_parser.set_defaults(func=analyze_registry)
+
+    # Export anomalies command
+    export_parser = subparsers.add_parser(
+        "export-anomalies",
+        help="Export anomalies to CSV or JSON format",
+    )
+    export_parser.add_argument(
+        "--registry-dir",
+        default="data/anomalies",
+        help="Anomaly registry directory (default: data/anomalies)",
+    )
+    export_parser.add_argument(
+        "--output-dir",
+        default="exports",
+        help="Output directory for exported files (default: exports)",
+    )
+    export_parser.add_argument(
+        "--format",
+        choices=["csv", "json"],
+        default="json",
+        help="Export format (default: json)",
+    )
+    export_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output",
+    )
+    export_parser.set_defaults(func=export_anomalies)
 
     return parser
 
