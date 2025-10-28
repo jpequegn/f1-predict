@@ -2,7 +2,8 @@
 
 This module provides functionality to collect historical Formula 1 data
 from the Ergast API for the years 2020-2024, including race results,
-qualifying results, lap times, and pit stop data.
+qualifying results, lap times, and pit stop data. Includes integrated
+anomaly detection hooks for data quality monitoring.
 """
 
 import csv
@@ -13,6 +14,8 @@ from pathlib import Path
 from typing import Optional
 
 from f1_predict.api.ergast import ErgastAPIClient
+from f1_predict.data.anomaly_hooks import AnomalyDetectionHooks
+from f1_predict.data.race_anomaly_detector import RaceAnomalyDetector
 
 
 class F1DataCollector:
@@ -38,6 +41,10 @@ class F1DataCollector:
 
         # Define the seasons to collect data for
         self.seasons = list(range(2020, 2025))  # 2020-2024
+
+        # Initialize anomaly detection hooks
+        self.anomaly_hooks = AnomalyDetectionHooks()
+        self.anomaly_hooks.race_detector = RaceAnomalyDetector()
 
         self.logger.info(f"F1DataCollector initialized for seasons {self.seasons}")
 
@@ -613,7 +620,6 @@ class F1DataCollector:
             Dictionary with enrichment results for each data type
         """
         from f1_predict.data.track_data import TrackDataManager
-        from f1_predict.data.weather_collector import WeatherDataCollector
 
         self.logger.info("Starting data enrichment pipeline")
 
