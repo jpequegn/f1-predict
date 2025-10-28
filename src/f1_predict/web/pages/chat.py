@@ -1,7 +1,6 @@
 """Chat interface page for F1 Race Predictor web app."""
 
 import uuid
-from typing import Optional
 
 import streamlit as st
 
@@ -53,34 +52,33 @@ def show_chat_page() -> None:
             st.markdown(prompt)
 
         # Generate response
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response, attachments = generate_chat_response(
-                    prompt,
-                    st.session_state.conversation_id,
-                )
+        with st.chat_message("assistant"), st.spinner("Thinking..."):
+            response, attachments = generate_chat_response(
+                prompt,
+                st.session_state.conversation_id,
+            )
 
-                st.markdown(response)
+            st.markdown(response)
 
-                # Display attachments
-                if attachments:
-                    for attachment in attachments:
-                        if attachment["type"] == "metric":
-                            st.metric(
-                                attachment.get("label", ""),
-                                attachment.get("value", ""),
-                            )
-                        elif attachment["type"] == "table":
-                            st.dataframe(attachment["data"], use_container_width=True)
+            # Display attachments
+            if attachments:
+                for attachment in attachments:
+                    if attachment["type"] == "metric":
+                        st.metric(
+                            attachment.get("label", ""),
+                            attachment.get("value", ""),
+                        )
+                    elif attachment["type"] == "table":
+                        st.dataframe(attachment["data"], use_container_width=True)
 
-                # Add assistant message
-                st.session_state.chat_messages.append(
-                    {
-                        "role": "assistant",
-                        "content": response,
-                        "attachments": attachments,
-                    }
-                )
+            # Add assistant message
+            st.session_state.chat_messages.append(
+                {
+                    "role": "assistant",
+                    "content": response,
+                    "attachments": attachments,
+                }
+            )
 
         # Rerun to update chat display
         st.rerun()
@@ -110,13 +108,13 @@ def show_chat_page() -> None:
         st.markdown("---")
         st.markdown("### ⚙️ Chat Settings")
 
-        model_choice = st.selectbox(
+        st.selectbox(
             "AI Model",
             options=["GPT-4", "Claude 3", "Local LLM"],
             index=1,
         )
 
-        temperature = st.slider(
+        st.slider(
             "Creativity",
             min_value=0.0,
             max_value=1.0,
@@ -135,8 +133,7 @@ def generate_chat_response(
     prompt: str,
     conversation_id: str,
 ) -> tuple[str, list]:
-    """
-    Generate AI response to chat prompt.
+    """Generate AI response to chat prompt.
 
     Args:
         prompt: User's chat message

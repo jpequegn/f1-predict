@@ -12,7 +12,7 @@ from enum import Enum
 import json
 from pathlib import Path
 import time
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import structlog
 

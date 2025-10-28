@@ -474,7 +474,7 @@ class AnomalyDetectionSystem:
         """
         if score > 0.8 or len(detectors_triggered) >= 2:
             return "critical"
-        elif score > 0.6 or len(detectors_triggered) == 1:
+        if score > 0.6 or len(detectors_triggered) == 1:
             return "warning"
         return "info"
 

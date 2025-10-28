@@ -1,13 +1,12 @@
 """LLM explanation utilities for web interface."""
-from typing import Dict, Any
+from typing import Any, Dict
 
 # TODO: Import actual LLM client from Issue #11
 # from f1_predict.llm.client import LLMClient
 
 
 def generate_prediction_explanation(prediction: Dict[str, Any]) -> str:
-    """
-    Generate natural language explanation for a race prediction.
+    """Generate natural language explanation for a race prediction.
 
     Args:
         prediction: Prediction dictionary with podium, confidence scores
@@ -33,8 +32,7 @@ def generate_prediction_explanation(prediction: Dict[str, Any]) -> str:
 
 
 def generate_driver_comparison(driver1: str, driver2: str) -> str:
-    """
-    Generate comparison between two drivers.
+    """Generate comparison between two drivers.
 
     Args:
         driver1: First driver name
