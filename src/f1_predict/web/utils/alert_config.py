@@ -6,8 +6,8 @@ from environment variables.
 
 from typing import Any, Optional
 
-import structlog
 from pydantic import BaseModel, Field, validator
+import structlog
 
 logger = structlog.get_logger(__name__)
 

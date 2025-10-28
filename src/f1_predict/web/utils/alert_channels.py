@@ -3,15 +3,15 @@
 Implements email, Slack, and other notification channels for alert delivery.
 """
 
-import smtplib
 from abc import ABC, abstractmethod
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import smtplib
 from typing import Any, Optional
 
-import structlog
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+import structlog
 
 logger = structlog.get_logger(__name__)
 
@@ -279,7 +279,7 @@ class SlackAlertChannel(AlertChannel):
             message = self._format_slack_message(alert)
 
             # Send message
-            response = self.client.chat_postMessage(
+            self.client.chat_postMessage(
                 channel=channel,
                 blocks=message,
                 text=alert.get("title", "Alert"),  # Fallback text
@@ -314,12 +314,6 @@ class SlackAlertChannel(AlertChannel):
             "warning": "🟡",
             "info": "🟢",
         }.get(alert.get("severity", "info").lower(), "ℹ️")
-
-        severity_color = {
-            "critical": "#DC3545",
-            "warning": "#FFC107",
-            "info": "#28A745",
-        }.get(alert.get("severity", "info").lower(), "#A3A9BF")
 
         return [
             {

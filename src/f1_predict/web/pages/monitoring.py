@@ -245,7 +245,7 @@ def _display_alert_management() -> None:
             )
 
         threshold = st.slider("Threshold", 0.0, 1.0, 0.8, key="alert_threshold")
-        severity = st.selectbox("Severity", ["INFO", "WARNING", "CRITICAL"], key="alert_severity")
+        st.selectbox("Severity", ["INFO", "WARNING", "CRITICAL"], key="alert_severity")
 
         if st.button("+ Add Rule"):
             st.success(f"Rule added: {metric_name} {comparison} {threshold}")
@@ -253,7 +253,6 @@ def _display_alert_management() -> None:
     with tab3:
         st.markdown("#### Alert Statistics")
         if not alerts_df.empty:
-            stats = alerts_df["severity"].value_counts()
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Total Alerts", len(alerts_df))
@@ -274,16 +273,16 @@ def _display_alert_management() -> None:
         st.markdown("#### Alert Configuration")
         st.info("ℹ️ Configure alert delivery channels")
 
-        enable_console = st.checkbox("Console Output", value=True)
-        enable_file = st.checkbox("File Logging", value=True)
+        st.checkbox("Console Output", value=True)
+        st.checkbox("File Logging", value=True)
         enable_email = st.checkbox("Email Notifications", value=False)
         enable_slack = st.checkbox("Slack Integration", value=False)
 
         if enable_email:
-            email_recipients = st.text_area("Email Recipients (comma-separated)")
+            st.text_area("Email Recipients (comma-separated)")
 
         if enable_slack:
-            slack_webhook = st.text_input("Slack Webhook URL", type="password")
+            st.text_input("Slack Webhook URL", type="password")
 
         if st.button("💾 Save Configuration"):
             st.success("Alert configuration saved")
@@ -304,7 +303,7 @@ def _display_model_comparison() -> None:
             "Model 2", ["XGBoost", "Ensemble", "LightGBM", "Random Forest"], key="model2"
         )
     with col3:
-        compare_btn = st.button("🔄 Compare")
+        st.button("🔄 Compare")
 
     st.markdown("#### Performance Metrics Comparison")
 

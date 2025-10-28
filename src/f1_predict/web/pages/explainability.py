@@ -480,7 +480,6 @@ def _show_whatif_analysis_tab(visualizer: SHAPVisualizer, max_features: int) -> 
 
                 # Show prediction change
                 pred_delta = whatif_result["prediction_delta"]
-                delta_color = "green" if pred_delta > 0 else "red"
 
                 st.markdown("### Prediction Impact")
                 col1, col2, col3 = st.columns(3)

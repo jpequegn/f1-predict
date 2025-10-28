@@ -2,6 +2,7 @@
 
 import logging
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -29,8 +30,6 @@ logger = logging.getLogger(__name__)
 # Sample data generator for demonstration
 def _get_sample_race_results() -> pd.DataFrame:
     """Generate sample race results for demonstration."""
-    import numpy as np
-
     np.random.seed(42)
 
     teams = [
