@@ -118,15 +118,16 @@ class ARIMAPredictor(MultiVariateTimeSeriesPredictor):
         try:
             alpha = 1 - confidence_level
             forecast_result = self.fitted_model.get_forecast(steps=steps_ahead)
-            forecast_df = forecast_result.conf_int(alpha=alpha)
+            forecast_mean = forecast_result.predicted_mean.values
+            conf_df = forecast_result.conf_int(alpha=alpha)
 
             return {
-                "forecast": forecast_df.iloc[:, 0].values,
-                "lower_bound": forecast_df.iloc[:, 1].values,
-                "upper_bound": forecast_df.iloc[:, 2].values,
+                "forecast": forecast_mean,
+                "lower_bound": conf_df.iloc[:, 0].values,
+                "upper_bound": conf_df.iloc[:, 1].values,
                 "confidence": confidence_level,
                 "periods": steps_ahead,
-                "mean": float(forecast_df.iloc[:, 0].mean()),
+                "mean": float(forecast_mean.mean()),
             }
 
         except Exception as e:
@@ -288,15 +289,16 @@ class SARIMAPredictor(MultiVariateTimeSeriesPredictor):
         try:
             alpha = 1 - confidence_level
             forecast_result = self.fitted_model.get_forecast(steps=steps_ahead)
-            forecast_df = forecast_result.conf_int(alpha=alpha)
+            forecast_mean = forecast_result.predicted_mean.values
+            conf_df = forecast_result.conf_int(alpha=alpha)
 
             return {
-                "forecast": forecast_df.iloc[:, 0].values,
-                "lower_bound": forecast_df.iloc[:, 1].values,
-                "upper_bound": forecast_df.iloc[:, 2].values,
+                "forecast": forecast_mean,
+                "lower_bound": conf_df.iloc[:, 0].values,
+                "upper_bound": conf_df.iloc[:, 1].values,
                 "confidence": confidence_level,
                 "periods": steps_ahead,
-                "mean": float(forecast_df.iloc[:, 0].mean()),
+                "mean": float(forecast_mean.mean()),
             }
 
         except Exception as e:
