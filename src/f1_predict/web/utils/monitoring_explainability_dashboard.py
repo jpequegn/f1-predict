@@ -4,6 +4,7 @@ Provides Streamlit components for visualizing SHAP-based explanations, drift ana
 and performance degradation insights in the monitoring dashboard.
 """
 
+import json
 from typing import Any, Optional
 
 import pandas as pd
@@ -69,7 +70,7 @@ class ExplainabilityChartBuilders:
                     x=time_points,
                     y=features,
                     colorscale="Viridis",
-                    colorbar=dict(title="Importance"),
+                    colorbar={"title": "Importance"},
                 )
             )
 
@@ -105,7 +106,7 @@ class ExplainabilityChartBuilders:
                 go.Bar(
                     x=["Baseline", "Current"],
                     y=[drift_explanation.baseline_mean, drift_explanation.current_mean],
-                    marker=dict(color=["#1F4E8C", "#FFC107"]),
+                    marker={"color": ["#1F4E8C", "#FFC107"]},
                     text=[
                         f"{drift_explanation.baseline_mean:.4f}",
                         f"{drift_explanation.current_mean:.4f}",
@@ -147,7 +148,7 @@ class ExplainabilityChartBuilders:
                 go.Bar(
                     x=["Baseline", "Current"],
                     y=[analysis.baseline_value, analysis.current_value],
-                    marker=dict(color=["#28A745", "#DC3545"]),
+                    marker={"color": ["#28A745", "#DC3545"]},
                     text=[
                         f"{analysis.baseline_value:.4f}",
                         f"{analysis.current_value:.4f}",
@@ -330,8 +331,6 @@ class ExplainabilityDataLoaders:
             # Try to load from file
             explanations = []
             if monitor.explanations_file.exists():
-                import json
-
                 with open(monitor.explanations_file) as f:
                     for line in f:
                         if line.strip():
