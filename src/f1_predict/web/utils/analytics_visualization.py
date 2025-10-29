@@ -323,6 +323,142 @@ def create_standings_chart(standings_data: pd.DataFrame, driver_standings: bool 
     return fig
 
 
+def create_prediction_confidence_distribution(confidence_data: pd.DataFrame) -> go.Figure:
+    """Create prediction confidence distribution visualization.
+
+    Args:
+        confidence_data: DataFrame with confidence scores and categories
+
+    Returns:
+        Plotly figure showing confidence distribution
+    """
+    if len(confidence_data) == 0:
+        return _create_empty_chart("Prediction Confidence Distribution")
+
+    fig = go.Figure()
+
+    # Create violin plot for confidence distribution by category
+    categories = confidence_data.get("category", []).unique()
+    for category in categories:
+        category_data = confidence_data[confidence_data.get("category") == category]
+        fig.add_trace(
+            go.Violin(
+                x=[category] * len(category_data),
+                y=category_data.get("confidence", []),
+                name=category,
+                meanline_visible=True,
+                points=False,
+                scalegroup=category,
+            )
+        )
+
+    fig.update_layout(
+        title="Prediction Confidence Distribution",
+        xaxis_title="Category",
+        yaxis_title="Confidence Score",
+        template="plotly_dark",
+        height=400,
+        showlegend=True,
+    )
+
+    return fig
+
+
+def create_feature_importance_waterfall(
+    importance_data: pd.DataFrame,
+) -> go.Figure:
+    """Create feature importance waterfall chart.
+
+    Args:
+        importance_data: DataFrame with feature names and importance values
+
+    Returns:
+        Plotly waterfall chart showing feature contributions
+    """
+    if len(importance_data) == 0:
+        return _create_empty_chart("Feature Importance Waterfall")
+
+    # Make a copy to avoid modifying original
+    data_copy = importance_data.copy()
+
+    # Sort by absolute importance for better visualization
+    data_copy["abs_importance"] = data_copy.get("importance", []).abs()
+    data_copy = data_copy.sort_values(by="abs_importance", ascending=False).head(10)
+
+    features = list(data_copy.get("feature", []))
+    values = list(data_copy.get("importance", []))
+
+    fig = go.Figure(
+        data=go.Waterfall(
+            x=features,
+            y=values,
+            increasing={"marker": {"color": "#28A745"}},
+            decreasing={"marker": {"color": "#DC3545"}},
+            connector={"line": {"color": "#666"}},
+            textposition="auto",
+        )
+    )
+
+    fig.update_layout(
+        title="Feature Importance Waterfall Chart",
+        xaxis_title="Feature",
+        yaxis_title="Importance Score",
+        template="plotly_dark",
+        height=400,
+        xaxis_tickangle=-45,
+    )
+
+    return fig
+
+
+def create_circuit_sector_performance(sector_data: pd.DataFrame) -> go.Figure:
+    """Create circuit sector performance comparison.
+
+    Args:
+        sector_data: DataFrame with sector, driver, and time columns
+
+    Returns:
+        Plotly figure showing sector performance
+    """
+    if len(sector_data) == 0:
+        return _create_empty_chart("Circuit Sector Performance")
+
+    fig = go.Figure()
+
+    drivers = sector_data.get("driver", []).unique()
+    sectors = sorted(sector_data.get("sector", []).unique())
+
+    for driver in drivers:
+        driver_data = sector_data[sector_data.get("driver") == driver]
+        sector_times = []
+        for sector in sectors:
+            sector_time = driver_data[driver_data.get("sector") == sector].get("time", [])
+            if len(sector_time) > 0:
+                sector_times.append(float(sector_time.iloc[0]))
+            else:
+                sector_times.append(0)
+
+        fig.add_trace(
+            go.Scatterpolar(
+                r=sector_times,
+                theta=[f"Sector {s}" for s in sectors],
+                fill="toself",
+                name=driver,
+                line={"width": 2},
+            )
+        )
+
+    fig.update_layout(
+        polar={"radialaxis": {"visible": True}},
+        title="Circuit Sector Performance Comparison",
+        template="plotly_dark",
+        height=500,
+        showlegend=True,
+    )
+
+    return fig
+
+
 def _create_empty_chart(title: str) -> go.Figure:
     """Create a placeholder empty chart.
 
