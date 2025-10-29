@@ -11,12 +11,13 @@ Provides comprehensive data profiling for F1 datasets including:
 
 from dataclasses import dataclass, field
 from enum import Enum
+import time
 from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-import structlog
 from scipy import stats
+import structlog
 
 # Type aliases for cleaner type hints
 NDArray = np.ndarray[Any, np.dtype[np.floating[Any]]]
@@ -108,7 +109,9 @@ class CategoricalProfile:
             "mode": self.mode,
             "mode_freq": int(self.mode_freq),
             "mode_pct": round(self.mode_pct, 2),
-            "top_values": dict(sorted(self.top_values.items(), key=lambda x: x[1], reverse=True)[:10]),
+            "top_values": dict(
+                sorted(self.top_values.items(), key=lambda x: x[1], reverse=True)[:10]
+            ),
         }
 
 
@@ -154,7 +157,9 @@ class DataProfiler:
         self.iqr_multiplier = iqr_multiplier
         self.logger = logger.bind(component="data_profiler")
 
-    def profile_dataframe(self, df: pd.DataFrame, name: str = "dataset") -> DatasetProfile:
+    def profile_dataframe(
+        self, df: pd.DataFrame, name: str = "dataset"
+    ) -> DatasetProfile:
         """Generate comprehensive profile for a DataFrame.
 
         Args:
@@ -164,15 +169,16 @@ class DataProfiler:
         Returns:
             DatasetProfile with complete analysis
         """
-        import time
-
         try:
             start_time = time.time()
 
             # Basic info
             rows, cols = df.shape
             memory_usage = df.memory_usage(deep=True).sum()
-            missing_pct = (df.isna().sum().sum() / (rows * cols)) * 100 if (rows * cols) > 0 else 0.0
+            total_cells = rows * cols
+            missing_pct = (
+                (df.isna().sum().sum() / total_cells) * 100 if total_cells > 0 else 0.0
+            )
             duplicate_rows = df.duplicated().sum()
 
             # Profile numeric columns
@@ -208,7 +214,13 @@ class DataProfiler:
             )
 
             elapsed = time.time() - start_time
-            self.logger.info("dataset_profiled", name=name, rows=rows, cols=cols, elapsed_sec=round(elapsed, 2))
+            self.logger.info(
+                "dataset_profiled",
+                name=name,
+                rows=rows,
+                cols=cols,
+                elapsed_sec=round(elapsed, 2),
+            )
 
             return profile
 
@@ -313,7 +325,9 @@ class DataProfiler:
             top_values=top_values,
         )
 
-    def compare_profiles(self, profile1: DatasetProfile, profile2: DatasetProfile) -> dict[str, Any]:
+    def compare_profiles(
+        self, profile1: DatasetProfile, profile2: DatasetProfile
+    ) -> dict[str, Any]:
         """Compare two dataset profiles.
 
         Args:
