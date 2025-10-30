@@ -15,6 +15,8 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import structlog
 
+from f1_predict.optimization.config_loader import ConfigLoader
+
 logger = structlog.get_logger(__name__)
 
 
@@ -37,22 +39,24 @@ class LightGBMRacePredictor:
     def __init__(
         self,
         target: str = "podium",
-        learning_rate: float = 0.1,
-        n_estimators: int = 100,
-        num_leaves: int = 31,
-        max_depth: int = -1,
-        min_data_in_leaf: int = 20,
-        feature_fraction: float = 0.8,
-        bagging_fraction: float = 0.8,
-        bagging_freq: int = 5,
-        random_state: int = 42,
-        early_stopping_rounds: int | None = 10,
-        verbose: int = -1,
+        use_optimized_params: bool = True,
+        learning_rate: float | None = None,
+        n_estimators: int | None = None,
+        num_leaves: int | None = None,
+        max_depth: int | None = None,
+        min_data_in_leaf: int | None = None,
+        feature_fraction: float | None = None,
+        bagging_fraction: float | None = None,
+        bagging_freq: int | None = None,
+        random_state: int | None = None,
+        early_stopping_rounds: int | None = None,
+        verbose: int | None = None,
     ):
         """Initialize LightGBM predictor.
 
         Args:
             target: Prediction target - "podium", "points", or "win"
+            use_optimized_params: Whether to load optimized hyperparameters via ConfigLoader
             learning_rate: Learning rate (default: 0.1)
             n_estimators: Number of boosting iterations (default: 100)
             num_leaves: Maximum tree leaves (default: 31)
@@ -61,13 +65,74 @@ class LightGBMRacePredictor:
             feature_fraction: Fraction of features to use (default: 0.8)
             bagging_fraction: Fraction of data to use for bagging (default: 0.8)
             bagging_freq: Frequency for bagging (default: 5)
-            random_state: Random seed for reproducibility
-            early_stopping_rounds: Rounds without improvement before stopping
-            verbose: Verbosity level (-1 for silent)
+            random_state: Random seed for reproducibility (default: 42)
+            early_stopping_rounds: Rounds without improvement before stopping (default: 10)
+            verbose: Verbosity level (-1 for silent, default: -1)
         """
         if target not in ["podium", "points", "win"]:
             msg = f"Invalid target: {target}. Must be 'podium', 'points', or 'win'"
             raise ValueError(msg)
+
+        # Defaults
+        defaults = {
+            "learning_rate": 0.1,
+            "n_estimators": 100,
+            "num_leaves": 31,
+            "max_depth": -1,
+            "min_data_in_leaf": 20,
+            "feature_fraction": 0.8,
+            "bagging_fraction": 0.8,
+            "bagging_freq": 5,
+            "random_state": 42,
+            "early_stopping_rounds": 10,
+            "verbose": -1,
+        }
+
+        # Load optimized hyperparameters if enabled
+        if use_optimized_params:
+            optimized = ConfigLoader.get_hyperparameters("lightgbm")
+            # Collect provided params (those not None)
+            provided_params = {
+                k: v for k, v in {
+                    "learning_rate": learning_rate,
+                    "n_estimators": n_estimators,
+                    "num_leaves": num_leaves,
+                    "max_depth": max_depth,
+                    "min_data_in_leaf": min_data_in_leaf,
+                    "feature_fraction": feature_fraction,
+                    "bagging_fraction": bagging_fraction,
+                    "bagging_freq": bagging_freq,
+                    "random_state": random_state,
+                    "early_stopping_rounds": early_stopping_rounds,
+                    "verbose": verbose,
+                }.items() if v is not None
+            }
+            # Merge: optimized first, then override with provided params
+            merged = {**optimized, **provided_params}
+            learning_rate = merged.get("learning_rate", defaults["learning_rate"])
+            n_estimators = merged.get("n_estimators", defaults["n_estimators"])
+            num_leaves = merged.get("num_leaves", defaults["num_leaves"])
+            max_depth = merged.get("max_depth", defaults["max_depth"])
+            min_data_in_leaf = merged.get("min_data_in_leaf", defaults["min_data_in_leaf"])
+            feature_fraction = merged.get("feature_fraction", defaults["feature_fraction"])
+            bagging_fraction = merged.get("bagging_fraction", defaults["bagging_fraction"])
+            bagging_freq = merged.get("bagging_freq", defaults["bagging_freq"])
+            random_state = merged.get("random_state", defaults["random_state"])
+            early_stopping_rounds = merged.get("early_stopping_rounds", defaults["early_stopping_rounds"])
+            verbose = merged.get("verbose", defaults["verbose"])
+        else:
+            # Use provided params or defaults
+            learning_rate = learning_rate if learning_rate is not None else defaults["learning_rate"]
+            n_estimators = n_estimators if n_estimators is not None else defaults["n_estimators"]
+            num_leaves = num_leaves if num_leaves is not None else defaults["num_leaves"]
+            max_depth = max_depth if max_depth is not None else defaults["max_depth"]
+            min_data_in_leaf = min_data_in_leaf if min_data_in_leaf is not None else defaults["min_data_in_leaf"]
+            feature_fraction = feature_fraction if feature_fraction is not None else defaults["feature_fraction"]
+            bagging_fraction = bagging_fraction if bagging_fraction is not None else defaults["bagging_fraction"]
+            bagging_freq = bagging_freq if bagging_freq is not None else defaults["bagging_freq"]
+            random_state = random_state if random_state is not None else defaults["random_state"]
+            early_stopping_rounds = early_stopping_rounds if early_stopping_rounds is not None else defaults["early_stopping_rounds"]
+            verbose = verbose if verbose is not None else defaults["verbose"]
 
         self.target = target
         self.learning_rate = learning_rate

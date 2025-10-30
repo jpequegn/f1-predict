@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -213,3 +214,88 @@ class TestXGBoostRacePredictor:
         """Test loading non-existent model file."""
         with pytest.raises(FileNotFoundError):
             XGBoostRacePredictor.load("nonexistent_model.pkl")
+
+    @patch("f1_predict.models.xgboost_model.ConfigLoader")
+    def test_use_optimized_params_true(self, mock_config_loader):
+        """Test that ConfigLoader is called when use_optimized_params=True."""
+        # Setup mock
+        mock_config_loader.get_hyperparameters.return_value = {
+            "learning_rate": 0.05,
+            "n_estimators": 200,
+            "max_depth": 7,
+            "min_child_weight": 2,
+            "subsample": 0.9,
+            "colsample_bytree": 0.85,
+            "reg_alpha": 0.1,
+            "reg_lambda": 0.5,
+        }
+
+        # Create predictor with optimized params
+        predictor = XGBoostRacePredictor(target="podium", use_optimized_params=True)
+
+        # Verify ConfigLoader was called
+        mock_config_loader.get_hyperparameters.assert_called_once_with("xgboost")
+
+        # Verify optimized params were used
+        assert predictor.learning_rate == 0.05
+        assert predictor.n_estimators == 200
+        assert predictor.max_depth == 7
+
+    @patch("f1_predict.models.xgboost_model.ConfigLoader")
+    def test_use_optimized_params_false(self, mock_config_loader):
+        """Test that ConfigLoader is not called when use_optimized_params=False."""
+        # Create predictor with optimization disabled
+        predictor = XGBoostRacePredictor(
+            target="podium",
+            use_optimized_params=False,
+            learning_rate=0.05,
+            n_estimators=50,
+        )
+
+        # Verify ConfigLoader was NOT called
+        mock_config_loader.get_hyperparameters.assert_not_called()
+
+        # Verify provided params were used
+        assert predictor.learning_rate == 0.05
+        assert predictor.n_estimators == 50
+
+    @patch("f1_predict.models.xgboost_model.ConfigLoader")
+    def test_kwargs_override_optimized_params(self, mock_config_loader):
+        """Test that kwargs override optimized params."""
+        # Setup mock
+        mock_config_loader.get_hyperparameters.return_value = {
+            "learning_rate": 0.05,
+            "n_estimators": 200,
+            "max_depth": 7,
+            "min_child_weight": 2,
+            "subsample": 0.9,
+            "colsample_bytree": 0.85,
+            "reg_alpha": 0.1,
+            "reg_lambda": 0.5,
+        }
+
+        # Create predictor with optimized params but override learning_rate
+        predictor = XGBoostRacePredictor(
+            target="podium",
+            use_optimized_params=True,
+            learning_rate=0.1,  # Override optimized value
+        )
+
+        # Verify optimized params were used except for override
+        assert predictor.learning_rate == 0.1  # Overridden
+        assert predictor.n_estimators == 200  # From optimized
+        assert predictor.max_depth == 7  # From optimized
+
+    @patch("f1_predict.models.xgboost_model.ConfigLoader")
+    def test_fallback_to_defaults_if_no_optimized(self, mock_config_loader):
+        """Test fallback to defaults if ConfigLoader returns empty dict."""
+        # Setup mock to return empty dict (no optimization file found)
+        mock_config_loader.get_hyperparameters.return_value = {}
+
+        # Create predictor - should use defaults
+        predictor = XGBoostRacePredictor(target="podium", use_optimized_params=True)
+
+        # Verify defaults were used
+        assert predictor.learning_rate == 0.1  # Default
+        assert predictor.n_estimators == 100  # Default
+        assert predictor.max_depth == 6  # Default
