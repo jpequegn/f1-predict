@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -319,3 +320,84 @@ class TestRandomForestRacePredictor:
         pred_large = predictor_large.predict(sample_features)
 
         assert len(pred_small) == len(pred_large)
+
+    @patch("f1_predict.models.random_forest.ConfigLoader")
+    def test_use_optimized_params_true(self, mock_config_loader):
+        """Test that ConfigLoader is called when use_optimized_params=True."""
+        # Setup mock
+        mock_config_loader.get_hyperparameters.return_value = {
+            "n_estimators": 200,
+            "max_depth": 15,
+            "min_samples_split": 3,
+            "min_samples_leaf": 1,
+            "max_features": "log2",
+            "random_state": 42,
+        }
+
+        # Create predictor with optimized params
+        predictor = RandomForestRacePredictor(target="podium", use_optimized_params=True)
+
+        # Verify ConfigLoader was called
+        mock_config_loader.get_hyperparameters.assert_called_once_with("random_forest")
+
+        # Verify optimized params were used
+        assert predictor.n_estimators == 200
+        assert predictor.max_depth == 15
+        assert predictor.min_samples_split == 3
+
+    @patch("f1_predict.models.random_forest.ConfigLoader")
+    def test_use_optimized_params_false(self, mock_config_loader):
+        """Test that ConfigLoader is not called when use_optimized_params=False."""
+        # Create predictor with optimization disabled
+        predictor = RandomForestRacePredictor(
+            target="podium",
+            use_optimized_params=False,
+            n_estimators=50,
+            max_depth=5,
+        )
+
+        # Verify ConfigLoader was NOT called
+        mock_config_loader.get_hyperparameters.assert_not_called()
+
+        # Verify provided params were used
+        assert predictor.n_estimators == 50
+        assert predictor.max_depth == 5
+
+    @patch("f1_predict.models.random_forest.ConfigLoader")
+    def test_kwargs_override_optimized_params(self, mock_config_loader):
+        """Test that kwargs override optimized params."""
+        # Setup mock
+        mock_config_loader.get_hyperparameters.return_value = {
+            "n_estimators": 200,
+            "max_depth": 15,
+            "min_samples_split": 3,
+            "min_samples_leaf": 1,
+            "max_features": "log2",
+            "random_state": 42,
+        }
+
+        # Create predictor with optimized params but override n_estimators
+        predictor = RandomForestRacePredictor(
+            target="podium",
+            use_optimized_params=True,
+            n_estimators=100,  # Override optimized value
+        )
+
+        # Verify optimized params were used except for override
+        assert predictor.n_estimators == 100  # Overridden
+        assert predictor.max_depth == 15  # From optimized
+        assert predictor.min_samples_split == 3  # From optimized
+
+    @patch("f1_predict.models.random_forest.ConfigLoader")
+    def test_fallback_to_defaults_if_no_optimized(self, mock_config_loader):
+        """Test fallback to defaults if ConfigLoader returns empty dict."""
+        # Setup mock to return empty dict (no optimization file found)
+        mock_config_loader.get_hyperparameters.return_value = {}
+
+        # Create predictor - should use defaults
+        predictor = RandomForestRacePredictor(target="podium", use_optimized_params=True)
+
+        # Verify defaults were used
+        assert predictor.n_estimators == 100  # Default
+        assert predictor.max_depth is None  # Default
+        assert predictor.min_samples_split == 2  # Default

@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -173,3 +174,90 @@ class TestLightGBMRacePredictor:
 
             loaded_predictions = loaded_predictor.predict(sample_features)
             pd.testing.assert_frame_equal(original_predictions, loaded_predictions)
+
+    @patch("f1_predict.models.lightgbm_model.ConfigLoader")
+    def test_use_optimized_params_true(self, mock_config_loader):
+        """Test that ConfigLoader is called when use_optimized_params=True."""
+        # Setup mock
+        mock_config_loader.get_hyperparameters.return_value = {
+            "learning_rate": 0.05,
+            "n_estimators": 200,
+            "num_leaves": 15,
+            "max_depth": 7,
+            "min_data_in_leaf": 10,
+            "feature_fraction": 0.9,
+            "bagging_fraction": 0.85,
+            "bagging_freq": 3,
+            "early_stopping_rounds": 5,
+        }
+
+        # Create predictor with optimized params
+        predictor = LightGBMRacePredictor(target="podium", use_optimized_params=True)
+
+        # Verify ConfigLoader was called
+        mock_config_loader.get_hyperparameters.assert_called_once_with("lightgbm")
+
+        # Verify optimized params were used
+        assert predictor.learning_rate == 0.05
+        assert predictor.n_estimators == 200
+        assert predictor.num_leaves == 15
+
+    @patch("f1_predict.models.lightgbm_model.ConfigLoader")
+    def test_use_optimized_params_false(self, mock_config_loader):
+        """Test that ConfigLoader is not called when use_optimized_params=False."""
+        # Create predictor with optimization disabled
+        predictor = LightGBMRacePredictor(
+            target="podium",
+            use_optimized_params=False,
+            learning_rate=0.05,
+            n_estimators=50,
+        )
+
+        # Verify ConfigLoader was NOT called
+        mock_config_loader.get_hyperparameters.assert_not_called()
+
+        # Verify provided params were used
+        assert predictor.learning_rate == 0.05
+        assert predictor.n_estimators == 50
+
+    @patch("f1_predict.models.lightgbm_model.ConfigLoader")
+    def test_kwargs_override_optimized_params(self, mock_config_loader):
+        """Test that kwargs override optimized params."""
+        # Setup mock
+        mock_config_loader.get_hyperparameters.return_value = {
+            "learning_rate": 0.05,
+            "n_estimators": 200,
+            "num_leaves": 15,
+            "max_depth": 7,
+            "min_data_in_leaf": 10,
+            "feature_fraction": 0.9,
+            "bagging_fraction": 0.85,
+            "bagging_freq": 3,
+            "early_stopping_rounds": 5,
+        }
+
+        # Create predictor with optimized params but override learning_rate
+        predictor = LightGBMRacePredictor(
+            target="podium",
+            use_optimized_params=True,
+            learning_rate=0.1,  # Override optimized value
+        )
+
+        # Verify optimized params were used except for override
+        assert predictor.learning_rate == 0.1  # Overridden
+        assert predictor.n_estimators == 200  # From optimized
+        assert predictor.num_leaves == 15  # From optimized
+
+    @patch("f1_predict.models.lightgbm_model.ConfigLoader")
+    def test_fallback_to_defaults_if_no_optimized(self, mock_config_loader):
+        """Test fallback to defaults if ConfigLoader returns empty dict."""
+        # Setup mock to return empty dict (no optimization file found)
+        mock_config_loader.get_hyperparameters.return_value = {}
+
+        # Create predictor - should use defaults
+        predictor = LightGBMRacePredictor(target="podium", use_optimized_params=True)
+
+        # Verify defaults were used
+        assert predictor.learning_rate == 0.1  # Default
+        assert predictor.n_estimators == 100  # Default
+        assert predictor.num_leaves == 31  # Default

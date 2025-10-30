@@ -15,6 +15,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 import structlog
 
+from f1_predict.optimization.config_loader import ConfigLoader
+
 logger = structlog.get_logger(__name__)
 
 
@@ -37,12 +39,13 @@ class RandomForestRacePredictor:
     def __init__(
         self,
         target: str = "podium",
-        n_estimators: int = 100,
+        use_optimized_params: bool = True,
+        n_estimators: int | None = None,
         max_depth: int | None = None,
-        min_samples_split: int = 2,
-        min_samples_leaf: int = 1,
-        max_features: str | int | float = "sqrt",
-        random_state: int = 42,
+        min_samples_split: int | None = None,
+        min_samples_leaf: int | None = None,
+        max_features: str | int | float | None = None,
+        random_state: int | None = None,
         oob_score: bool = True,
         n_jobs: int = -1,
     ):
@@ -50,18 +53,60 @@ class RandomForestRacePredictor:
 
         Args:
             target: Prediction target - "podium", "points", or "win"
+            use_optimized_params: Whether to load optimized hyperparameters via ConfigLoader
             n_estimators: Number of trees in the forest (default: 100)
             max_depth: Maximum tree depth (None for unlimited)
-            min_samples_split: Minimum samples to split a node
-            min_samples_leaf: Minimum samples in leaf node
-            max_features: Number of features for best split
-            random_state: Random seed for reproducibility
+            min_samples_split: Minimum samples to split a node (default: 2)
+            min_samples_leaf: Minimum samples in leaf node (default: 1)
+            max_features: Number of features for best split (default: "sqrt")
+            random_state: Random seed for reproducibility (default: 42)
             oob_score: Whether to use out-of-bag samples for validation
             n_jobs: Number of parallel jobs (-1 for all cores)
         """
         if target not in ["podium", "points", "win"]:
             msg = f"Invalid target: {target}. Must be 'podium', 'points', or 'win'"
             raise ValueError(msg)
+
+        # Defaults
+        defaults = {
+            "n_estimators": 100,
+            "max_depth": None,
+            "min_samples_split": 2,
+            "min_samples_leaf": 1,
+            "max_features": "sqrt",
+            "random_state": 42,
+        }
+
+        # Load optimized hyperparameters if enabled
+        if use_optimized_params:
+            optimized = ConfigLoader.get_hyperparameters("random_forest")
+            # Collect provided params (those not None, excluding special cases)
+            provided_params = {
+                k: v for k, v in {
+                    "n_estimators": n_estimators,
+                    "max_depth": max_depth,
+                    "min_samples_split": min_samples_split,
+                    "min_samples_leaf": min_samples_leaf,
+                    "max_features": max_features,
+                    "random_state": random_state,
+                }.items() if v is not None
+            }
+            # Merge: optimized first, then override with provided params
+            merged = {**optimized, **provided_params}
+            n_estimators = merged.get("n_estimators", defaults["n_estimators"])
+            max_depth = merged.get("max_depth", defaults["max_depth"])
+            min_samples_split = merged.get("min_samples_split", defaults["min_samples_split"])
+            min_samples_leaf = merged.get("min_samples_leaf", defaults["min_samples_leaf"])
+            max_features = merged.get("max_features", defaults["max_features"])
+            random_state = merged.get("random_state", defaults["random_state"])
+        else:
+            # Use provided params or defaults
+            n_estimators = n_estimators if n_estimators is not None else defaults["n_estimators"]
+            max_depth = max_depth if max_depth is not None else defaults["max_depth"]
+            min_samples_split = min_samples_split if min_samples_split is not None else defaults["min_samples_split"]
+            min_samples_leaf = min_samples_leaf if min_samples_leaf is not None else defaults["min_samples_leaf"]
+            max_features = max_features if max_features is not None else defaults["max_features"]
+            random_state = random_state if random_state is not None else defaults["random_state"]
 
         self.target = target
         self.n_estimators = n_estimators

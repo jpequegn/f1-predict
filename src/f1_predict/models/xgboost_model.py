@@ -15,6 +15,8 @@ from sklearn.preprocessing import StandardScaler
 import structlog
 import xgboost as xgb
 
+from f1_predict.optimization.config_loader import ConfigLoader
+
 logger = structlog.get_logger(__name__)
 
 
@@ -37,35 +39,94 @@ class XGBoostRacePredictor:
     def __init__(
         self,
         target: str = "podium",
-        learning_rate: float = 0.1,
-        n_estimators: int = 100,
-        max_depth: int = 6,
-        min_child_weight: int = 1,
-        subsample: float = 0.8,
-        colsample_bytree: float = 0.8,
-        random_state: int = 42,
-        early_stopping_rounds: int | None = 10,
-        eval_metric: str = "logloss",
-        use_gpu: bool = False,
+        use_optimized_params: bool = True,
+        learning_rate: float | None = None,
+        n_estimators: int | None = None,
+        max_depth: int | None = None,
+        min_child_weight: int | None = None,
+        subsample: float | None = None,
+        colsample_bytree: float | None = None,
+        random_state: int | None = None,
+        early_stopping_rounds: int | None = None,
+        eval_metric: str | None = None,
+        use_gpu: bool | None = None,
     ):
         """Initialize XGBoost predictor.
 
         Args:
             target: Prediction target - "podium", "points", or "win"
+            use_optimized_params: Whether to load optimized hyperparameters via ConfigLoader
             learning_rate: Step size shrinkage (default: 0.1)
             n_estimators: Number of boosting rounds (default: 100)
             max_depth: Maximum tree depth (default: 6)
             min_child_weight: Minimum sum of instance weight in child (default: 1)
             subsample: Subsample ratio of training instances (default: 0.8)
             colsample_bytree: Subsample ratio of features (default: 0.8)
-            random_state: Random seed for reproducibility
-            early_stopping_rounds: Rounds without improvement before stopping (None to disable)
+            random_state: Random seed for reproducibility (default: 42)
+            early_stopping_rounds: Rounds without improvement before stopping (default: 10)
             eval_metric: Evaluation metric (default: "logloss")
             use_gpu: Whether to use GPU acceleration (default: False)
         """
         if target not in ["podium", "points", "win"]:
             msg = f"Invalid target: {target}. Must be 'podium', 'points', or 'win'"
             raise ValueError(msg)
+
+        # Defaults
+        defaults = {
+            "learning_rate": 0.1,
+            "n_estimators": 100,
+            "max_depth": 6,
+            "min_child_weight": 1,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
+            "random_state": 42,
+            "early_stopping_rounds": 10,
+            "eval_metric": "logloss",
+            "use_gpu": False,
+        }
+
+        # Load optimized hyperparameters if enabled
+        if use_optimized_params:
+            optimized = ConfigLoader.get_hyperparameters("xgboost")
+            # Collect provided params (those not None)
+            provided_params = {
+                k: v for k, v in {
+                    "learning_rate": learning_rate,
+                    "n_estimators": n_estimators,
+                    "max_depth": max_depth,
+                    "min_child_weight": min_child_weight,
+                    "subsample": subsample,
+                    "colsample_bytree": colsample_bytree,
+                    "random_state": random_state,
+                    "early_stopping_rounds": early_stopping_rounds,
+                    "eval_metric": eval_metric,
+                    "use_gpu": use_gpu,
+                }.items() if v is not None
+            }
+            # Merge: optimized first, then override with provided params
+            merged = {**optimized, **provided_params}
+            learning_rate = merged.get("learning_rate", defaults["learning_rate"])
+            n_estimators = merged.get("n_estimators", defaults["n_estimators"])
+            max_depth = merged.get("max_depth", defaults["max_depth"])
+            min_child_weight = merged.get("min_child_weight", defaults["min_child_weight"])
+            subsample = merged.get("subsample", defaults["subsample"])
+            colsample_bytree = merged.get("colsample_bytree", defaults["colsample_bytree"])
+            random_state = merged.get("random_state", defaults["random_state"])
+            early_stopping_rounds = merged.get("early_stopping_rounds", defaults["early_stopping_rounds"])
+            eval_metric = merged.get("eval_metric", defaults["eval_metric"])
+            use_gpu = merged.get("use_gpu", defaults["use_gpu"])
+        else:
+            # Use provided params or defaults
+            learning_rate = learning_rate if learning_rate is not None else defaults["learning_rate"]
+            n_estimators = n_estimators if n_estimators is not None else defaults["n_estimators"]
+            max_depth = max_depth if max_depth is not None else defaults["max_depth"]
+            min_child_weight = min_child_weight if min_child_weight is not None else defaults["min_child_weight"]
+            subsample = subsample if subsample is not None else defaults["subsample"]
+            colsample_bytree = colsample_bytree if colsample_bytree is not None else defaults["colsample_bytree"]
+            random_state = random_state if random_state is not None else defaults["random_state"]
+            early_stopping_rounds = early_stopping_rounds if early_stopping_rounds is not None else defaults["early_stopping_rounds"]
+            eval_metric = eval_metric if eval_metric is not None else defaults["eval_metric"]
+            use_gpu = use_gpu if use_gpu is not None else defaults["use_gpu"]
 
         self.target = target
         self.learning_rate = learning_rate
