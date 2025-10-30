@@ -81,7 +81,7 @@ class ObjectiveFunction:
                 "reg_lambda": trial.suggest_float("reg_lambda", 0.0, 1.0),
             }
             model = LGBMClassifier(**params, random_state=42, verbose=-1)
-            model.fit(x_train, y_train, verbose=False)
+            model.fit(x_train, y_train)  # LightGBM fit() doesn't have verbose param
             y_pred = model.predict(x_val)
             return accuracy_score(y_val, y_pred)
         except Exception as e:
