@@ -1,11 +1,11 @@
 """LLM explanation utilities for web interface."""
-from typing import Any, Dict
+from typing import Any
 
 # TODO: Import actual LLM client from Issue #11
 # from f1_predict.llm.client import LLMClient
 
 
-def generate_prediction_explanation(prediction: Dict[str, Any]) -> str:
+def generate_prediction_explanation(prediction: dict[str, Any]) -> str:
     """Generate natural language explanation for a race prediction.
 
     Args:

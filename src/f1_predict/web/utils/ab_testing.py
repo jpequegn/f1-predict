@@ -376,6 +376,5 @@ class ABTestingFramework:
         duration_hours = config.get("duration_hours", 24)
 
         phase_duration = duration_hours / 4
-        phase = min(int(elapsed_hours / phase_duration), 3)
+        return min(int(elapsed_hours / phase_duration), 3)
 
-        return phase
