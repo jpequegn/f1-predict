@@ -1,7 +1,6 @@
 """Home/Dashboard page for F1 Race Predictor web app."""
 
 from datetime import datetime
-from typing import Dict, List
 
 import streamlit as st
 
@@ -151,7 +150,7 @@ def show_home_page() -> None:
         st.caption(f"Last sync: {datetime.now().strftime('%H:%M')}")
 
 
-def get_upcoming_races() -> List[Dict]:
+def get_upcoming_races() -> list[dict]:
     """Get list of upcoming F1 races.
 
     Returns:
@@ -183,7 +182,7 @@ def get_upcoming_races() -> List[Dict]:
     ]
 
 
-def get_recent_predictions() -> List[Dict]:
+def get_recent_predictions() -> list[dict]:
     """Get list of recent predictions made by the system.
 
     Returns:

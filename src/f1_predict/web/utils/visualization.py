@@ -25,7 +25,7 @@ def create_race_results_comparison(driver1_data: pd.DataFrame, driver2_data: pd.
             x=list(range(len(driver1_data))),
             y=driver1_data.get("position", []),
             name=driver1_name,
-            line=dict(color="#1F4E8C", width=3),
+            line={"color": "#1F4E8C", "width": 3},
             mode="lines+markers"
         ))
 
@@ -34,7 +34,7 @@ def create_race_results_comparison(driver1_data: pd.DataFrame, driver2_data: pd.
             x=list(range(len(driver2_data))),
             y=driver2_data.get("position", []),
             name=driver2_name,
-            line=dict(color="#2762B3", width=3),
+            line={"color": "#2762B3", "width": 3},
             mode="lines+markers"
         ))
 
@@ -42,7 +42,7 @@ def create_race_results_comparison(driver1_data: pd.DataFrame, driver2_data: pd.
         title="Race Results Comparison",
         xaxis_title="Race Number",
         yaxis_title="Finishing Position",
-        yaxis=dict(autorange="reversed"),
+        yaxis={"autorange": "reversed"},
         hovermode="x unified",
         template="plotly_dark",
         height=400
@@ -71,7 +71,7 @@ def create_points_trend(driver1_data: pd.DataFrame, driver2_data: pd.DataFrame, 
             x=list(range(len(cumulative_points))),
             y=cumulative_points,
             name=driver1_name,
-            line=dict(color="#1F4E8C", width=3),
+            line={"color": "#1F4E8C", "width": 3},
             fill="tozeroy"
         ))
 
@@ -81,7 +81,7 @@ def create_points_trend(driver1_data: pd.DataFrame, driver2_data: pd.DataFrame, 
             x=list(range(len(cumulative_points))),
             y=cumulative_points,
             name=driver2_name,
-            line=dict(color="#2762B3", width=3),
+            line={"color": "#2762B3", "width": 3},
             fill="tozeroy"
         ))
 
@@ -116,7 +116,7 @@ def create_position_distribution(driver1_data: pd.DataFrame, driver2_data: pd.Da
             x=driver1_data.get("position", []),
             name=driver1_name,
             opacity=0.7,
-            marker=dict(color="#1F4E8C")
+            marker={"color": "#1F4E8C"}
         ))
 
     if len(driver2_data) > 0:
@@ -124,7 +124,7 @@ def create_position_distribution(driver1_data: pd.DataFrame, driver2_data: pd.Da
             x=driver2_data.get("position", []),
             name=driver2_name,
             opacity=0.7,
-            marker=dict(color="#2762B3")
+            marker={"color": "#2762B3"}
         ))
 
     fig.update_layout(

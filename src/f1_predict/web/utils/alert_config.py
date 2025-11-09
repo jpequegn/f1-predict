@@ -6,7 +6,7 @@ from environment variables.
 
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -28,7 +28,8 @@ class EmailConfig(BaseModel):
 
         extra = "allow"
 
-    @validator("recipients", pre=True)
+    @field_validator("recipients", mode="before")
+    @classmethod
     def parse_recipients(cls, v: Any) -> list[str]:
         """Parse recipients from comma-separated string or list.
 

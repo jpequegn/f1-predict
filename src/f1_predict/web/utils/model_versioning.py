@@ -286,7 +286,7 @@ class ModelRegistry:
                 "improved": diff > 0,
             }
 
-        comparison = {
+        return {
             "version1": version1,
             "version2": version2,
             "metrics_comparison": metric_comparison,
@@ -296,7 +296,6 @@ class ModelRegistry:
             "version2_status": meta2.status,
         }
 
-        return comparison
 
     def rollback_to_version(self, model_version: str) -> bool:
         """Rollback to a previous model version.

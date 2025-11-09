@@ -155,7 +155,7 @@ class ModelPerformanceTracker:
             is_correct = predicted == actual_outcome
             calibration_error = abs(confidence - (1.0 if is_correct else 0.0))
 
-            result = {
+            return {
                 "prediction_id": prediction_id,
                 "model_version": record["model_version"],
                 "predicted": predicted,
@@ -166,7 +166,6 @@ class ModelPerformanceTracker:
                 "timestamp": time.time(),
             }
 
-            return result
         except Exception as e:
             self.logger.error("error_recording_outcome", error=str(e))
             return None
@@ -200,7 +199,7 @@ class ModelPerformanceTracker:
         # Convert to DataFrame for calculation
         df = pd.DataFrame(recent)
 
-        metrics = {
+        return {
             "num_predictions": len(df),
             "avg_confidence": float(df["confidence"].mean()),
             "min_confidence": float(df["confidence"].min()),
@@ -208,7 +207,6 @@ class ModelPerformanceTracker:
             "confidence_std": float(df["confidence"].std()),
         }
 
-        return metrics
 
     def calculate_accuracy(
         self, model_version: Optional[str] = None, window_minutes: int = 60
