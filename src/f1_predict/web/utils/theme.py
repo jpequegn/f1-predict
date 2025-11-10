@@ -7,7 +7,6 @@ This module provides theme styling following the Nebula UI design system:
 - Modern, futuristic, elegant appearance
 """
 
-from typing import Dict
 
 
 def get_nebula_css() -> str:
@@ -350,7 +349,7 @@ def get_nebula_css() -> str:
     """
 
 
-def get_theme_config() -> Dict[str, any]:
+def get_theme_config() -> dict[str, any]:
     """Get Streamlit theme configuration.
 
     Returns:

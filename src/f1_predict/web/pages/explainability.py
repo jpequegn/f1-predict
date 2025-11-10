@@ -68,10 +68,9 @@ def show_explainability_page() -> None:
         # Cache management
         st.markdown("---")
         st.subheader("Cache Management")
-        if st.button("Clear Cache"):
-            if st.session_state.shap_explainer:
-                st.session_state.shap_explainer.clear_cache()
-                st.success("Cache cleared successfully!")
+        if st.button("Clear Cache") and st.session_state.shap_explainer:
+            st.session_state.shap_explainer.clear_cache()
+            st.success("Cache cleared successfully!")
 
         # Display settings
         st.markdown("---")

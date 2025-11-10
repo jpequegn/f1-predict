@@ -164,7 +164,7 @@ class DriverComparison:
                     "avg_position": None,
                 }
 
-            stats = {
+            return {
                 "circuit": circuit,
                 "races": len(circuit_races),
                 "wins": len(circuit_races[circuit_races.get("position", 999) == 1]),
@@ -175,7 +175,6 @@ class DriverComparison:
                 "best_finish": circuit_races.get("position", 0).min(),
             }
 
-            return stats
         except Exception as e:
             self.logger.error(f"Error getting circuit performance: {e}")
             return {}
@@ -290,7 +289,7 @@ class TeamComparison:
             if season:
                 data = data[data.get("season", 0) == season]
 
-            standings = (
+            return (
                 data.groupby(data.get("team", ""))
                 .agg(
                     {
@@ -302,7 +301,6 @@ class TeamComparison:
                 .sort_values("points", ascending=False)
             )
 
-            return standings
         except Exception as e:
             self.logger.error(f"Error getting team standings: {e}")
             return pd.DataFrame()

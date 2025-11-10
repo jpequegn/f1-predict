@@ -117,12 +117,12 @@ class ChartBuilders:
             height=height,
         )
 
-        fig.update_traces(line=dict(color="#1F4E8C", width=2))
+        fig.update_traces(line={"color": "#1F4E8C", "width": 2})
         fig.update_layout(
             hovermode="x unified",
             plot_bgcolor="#1E2130",
             paper_bgcolor="#121317",
-            font=dict(color="#E0E6F0"),
+            font={"color": "#E0E6F0"},
         )
 
         return fig
@@ -149,11 +149,11 @@ class ChartBuilders:
             height=height,
         )
 
-        fig.update_traces(marker=dict(color="#2762B3"))
+        fig.update_traces(marker={"color": "#2762B3"})
         fig.update_layout(
             plot_bgcolor="#1E2130",
             paper_bgcolor="#121317",
-            font=dict(color="#E0E6F0"),
+            font={"color": "#E0E6F0"},
         )
 
         return fig
@@ -222,7 +222,7 @@ class ChartBuilders:
                 z=[psi_values],
                 x=features,
                 colorscale="RdYlGn_r",
-                colorbar=dict(title="PSI"),
+                colorbar={"title": "PSI"},
                 hovertemplate="<b>%{x}</b><br>PSI: %{z:.3f}",
             )
         )
@@ -232,7 +232,7 @@ class ChartBuilders:
             height=height,
             plot_bgcolor="#1E2130",
             paper_bgcolor="#121317",
-            font=dict(color="#E0E6F0"),
+            font={"color": "#E0E6F0"},
         )
 
         return fig
@@ -265,7 +265,7 @@ class ChartBuilders:
             hovermode="x unified",
             plot_bgcolor="#1E2130",
             paper_bgcolor="#121317",
-            font=dict(color="#E0E6F0"),
+            font={"color": "#E0E6F0"},
         )
 
         return fig
@@ -296,7 +296,7 @@ class ChartBuilders:
         fig.update_layout(
             plot_bgcolor="#1E2130",
             paper_bgcolor="#121317",
-            font=dict(color="#E0E6F0"),
+            font={"color": "#E0E6F0"},
         )
 
         return fig
@@ -332,7 +332,7 @@ class ChartBuilders:
             barmode="group",
             plot_bgcolor="#1E2130",
             paper_bgcolor="#121317",
-            font=dict(color="#E0E6F0"),
+            font={"color": "#E0E6F0"},
             xaxis_title="Model",
             yaxis_title="Score",
         )
