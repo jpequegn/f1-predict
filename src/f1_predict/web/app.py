@@ -16,6 +16,7 @@ from f1_predict.web.pages import (
     monitoring,
     predict,
     settings,
+    simulator,
 )
 from f1_predict.web.utils.theme import apply_nebula_theme
 
@@ -57,10 +58,11 @@ def main() -> None:
 
         selected = option_menu(
             menu_title=None,
-            options=["Home", "Predict", "Compare", "Analytics", "Monitoring", "Explainability", "Chat", "Settings"],
+            options=["Home", "Predict", "Simulator", "Compare", "Analytics", "Monitoring", "Explainability", "Chat", "Settings"],
             icons=[
                 "house-fill",
                 "trophy-fill",
+                "speedometer2",
                 "bar-chart-fill",
                 "graph-up",
                 "activity",
@@ -102,6 +104,8 @@ def main() -> None:
         home.show_home_page()
     elif selected == "Predict":
         predict.show_prediction_page()
+    elif selected == "Simulator":
+        simulator.show_simulator_page()
     elif selected == "Compare":
         compare.show_comparison_page()
     elif selected == "Analytics":
