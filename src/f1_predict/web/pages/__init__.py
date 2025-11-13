@@ -9,11 +9,13 @@ from f1_predict.web.pages import (
     monitoring,
     predict,
     settings,
+    simulator,
 )
 
 __all__ = [
     "home",
     "predict",
+    "simulator",
     "compare",
     "analytics",
     "monitoring",
