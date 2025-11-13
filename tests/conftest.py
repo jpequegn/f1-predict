@@ -38,6 +38,9 @@ def pytest_configure(config):
     # Configure structlog for testing (avoid stdlib logger processors that expect 'name' attr)
     _configure_test_logging()
 
+    # Configure PyTorch for test safety - disable threading/multiprocessing
+    _configure_pytorch_for_testing()
+
 
 def _configure_test_logging() -> None:
     """Configure structlog for test environment with compatible processors."""
@@ -58,6 +61,33 @@ def _configure_test_logging() -> None:
         context_class=dict,
         cache_logger_on_first_use=False,  # Disable caching in tests
     )
+
+
+def _configure_pytorch_for_testing() -> None:
+    """Configure PyTorch for safe test execution.
+
+    Disables threading and multiprocessing to prevent segfaults when running
+    many tests sequentially. PyTorch's threading can accumulate state across
+    test runs, leading to crashes in torch/optim/adam.py.
+    """
+    try:
+        import torch
+        import os
+
+        # Disable threading to prevent state accumulation
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+
+        # Disable OpenMP (used by PyTorch internals)
+        os.environ["OMP_NUM_THREADS"] = "1"
+        os.environ["MKL_NUM_THREADS"] = "1"
+
+        # Force CPU only to avoid CUDA/thread issues
+        torch.set_default_device("cpu")
+
+    except ImportError:
+        # PyTorch not installed, skip configuration
+        pass
 
 
 # ============================================================================
@@ -668,4 +698,41 @@ def reset_streamlit_session():
             st.session_state.clear()
     except ImportError:
         # Streamlit not available, skip reset
+        yield
+
+
+@pytest.fixture(autouse=True)
+def cleanup_pytorch():
+    """Clean up PyTorch state between tests to prevent segfaults.
+
+    PyTorch can accumulate state (threads, memory, optimizer state) across
+    sequential test runs, leading to segmentation faults in torch/optim/adam.py.
+    This fixture ensures clean state before and after each test.
+
+    Yields:
+        None
+    """
+    try:
+        import torch
+        import gc
+
+        # Pre-test cleanup: garbage collection
+        gc.collect()
+
+        yield
+
+        # Post-test cleanup
+        # 1. Clear cache
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+
+        # 2. Reset threads to prevent accumulation
+        torch.set_num_threads(torch.get_num_threads())
+
+        # 3. Garbage collection
+        gc.collect()
+
+    except ImportError:
+        # PyTorch not available, skip cleanup
         yield
