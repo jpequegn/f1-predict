@@ -23,7 +23,140 @@ uv run pytest -m "not slow"
 
 # Generate HTML coverage report
 uv run pytest --cov-report=html
+
+# Run tests excluding PyTorch-based models (avoids segfaults)
+uv run pytest --ignore=tests/models/test_lstm_model.py --ignore=tests/models/test_arima_model.py -q
+
+# Run tests for specific domains
+PYTHONPATH=src uv run pytest tests/data/ -v  # Data collection tests
+PYTHONPATH=src uv run pytest tests/api/ -v   # API client tests
+PYTHONPATH=src uv run pytest tests/models/ --ignore=tests/models/test_lstm_model.py -v  # Model tests
+PYTHONPATH=src uv run pytest tests/web/ -v   # Web interface tests
+PYTHONPATH=src uv run pytest tests/features/ -v  # Feature engineering tests
 ```
+
+## Testing Standards & Guidelines (Issue #17)
+
+### Test Organization
+Tests are organized by module domain with corresponding source code structure:
+- `tests/api/` - API client tests (base, ergast, realtime, weather)
+- `tests/data/` - Data collection & processing tests (cleaning, collector, anomaly, weather, tire, track)
+- `tests/features/` - Feature engineering tests
+- `tests/models/` - Model tests (baseline, ensemble, random forest, xgboost, lightgbm, arima, anomaly)
+- `tests/web/` - Web interface tests (unit, integration, components)
+- `tests/analysis/` - Analysis & explainability tests (SHAP, race preview)
+- `tests/metrics/` - Performance metrics tests
+- `conftest.py` - Shared fixtures and pytest configuration
+
+### Test Framework Setup
+
+**Logging Configuration**: Tests use a special structlog configuration (in `conftest.py`) to avoid issues with stdlib logger processors that expect 'name' attributes on custom logger objects.
+
+**Fixtures**: Common fixtures are defined in `tests/conftest.py` and reused across test modules:
+- `mock_http_response` - HTTP success response mock
+- `mock_api_error` - HTTP error response mock
+- `sample_features` - Feature DataFrame for model testing
+- `sample_race_results` - Race result DataFrame
+- `temp_data_dir` / `temp_model_dir` - Temporary directories
+- `mock_session_state` - Streamlit session state mock
+- `mock_streamlit` - Streamlit component mocks
+
+### Test Coverage by Module
+
+| Module | Test Coverage | Notes |
+|--------|---------------|-------|
+| API Clients | ✅ Comprehensive | base, ergast tested; realtime pending |
+| Data Collection | ✅ Comprehensive | cleaning, collector, anomaly hooks tested |
+| Weather Data | ✅ 46 tests | New (Issue #17) - covers all major functions |
+| Tire/Track Data | ✅ 25 tests | New (Issue #17) - domain-specific patterns |
+| Feature Engineering | ✅ Comprehensive | Driver form, team reliability, circuit performance |
+| Models | ✅ Mostly complete | Exclude LSTM/ARIMA (PyTorch compatibility issues) |
+| Web Interface | ✅ Growing | Prediction page, analytics, theme tested |
+| Analysis | ⚠️ Partial | SHAP, explainer pending full coverage |
+
+### Running Tests Successfully
+
+**Preferred approach** (avoids segfaults from PyTorch):
+```bash
+PYTHONPATH=src uv run pytest tests/data tests/api tests/features tests/web -v
+```
+
+**Full suite** (requires stable PyTorch environment):
+```bash
+PYTHONPATH=src uv run pytest
+```
+
+**Quick smoke test**:
+```bash
+PYTHONPATH=src uv run pytest tests/data/test_cleaning.py tests/api/test_base.py -v
+```
+
+### Known Issues & Workarounds
+
+1. **PyTorch Segmentation Faults**
+   - Issue: LSTM/ARIMA tests cause segfaults in certain environments
+   - Workaround: Exclude with `--ignore=tests/models/test_lstm_model.py`
+   - Status: Awaiting investigation of torch/multiprocessing compatibility
+
+2. **Structlog Test Configuration**
+   - Issue: stdlib logger processors expect 'name' attribute
+   - Solution: Custom test configuration in `conftest.py`
+   - Status: ✅ Fixed in Issue #17
+
+### Test Markers
+Tests use pytest markers for selective execution:
+```bash
+uv run pytest -m "unit"           # Unit tests only
+uv run pytest -m "integration"    # Integration tests only
+uv run pytest -m "slow"           # Slow tests only
+uv run pytest -m "not slow"       # Skip slow tests
+uv run pytest -m "ml"             # ML model tests
+uv run pytest -m "data"           # Data processing tests
+uv run pytest -m "api"            # API tests
+```
+
+### Writing New Tests
+
+**Pattern for unit tests**:
+```python
+import pytest
+from unittest.mock import Mock, patch
+
+class TestMyModule:
+    """Test description."""
+
+    @pytest.fixture
+    def sample_data(self):
+        """Create sample data."""
+        return {"key": "value"}
+
+    def test_basic_functionality(self, sample_data):
+        """Test basic behavior."""
+        assert sample_data["key"] == "value"
+
+    @patch("module.function")
+    def test_with_mock(self, mock_func, sample_data):
+        """Test with mocked dependencies."""
+        mock_func.return_value = "mocked"
+        # Test logic here
+```
+
+**Key Guidelines**:
+1. Use descriptive test names: `test_<function>_<scenario>`
+2. One assertion per test when possible
+3. Mock external dependencies (APIs, files, etc.)
+4. Use fixtures for reusable test data
+5. Add docstrings explaining what is tested
+6. Keep tests fast and independent
+
+### Coverage Goals
+
+**Target**: ≥80% overall coverage with:
+- ≥85% for critical modules (API, data collection)
+- ≥75% for secondary modules (features, models)
+- ≥60% for UI/presentation code
+
+**Note**: Tests that don't import source modules will show 0% coverage (this is expected and OK).
 
 ### Code Quality
 ```bash
