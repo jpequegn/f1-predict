@@ -16,6 +16,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pandas as pd
 import pytest
+import structlog
 
 
 # ============================================================================
@@ -24,7 +25,7 @@ import pytest
 
 
 def pytest_configure(config):
-    """Register custom markers for all test phases."""
+    """Register custom markers and configure test environment."""
     config.addinivalue_line("markers", "slow: mark test as slow running")
     config.addinivalue_line("markers", "integration: mark test as integration")
     config.addinivalue_line("markers", "unit: mark test as unit test")
@@ -33,6 +34,30 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "api: mark test as API test")
     config.addinivalue_line("markers", "performance: mark test as performance")
     config.addinivalue_line("markers", "cli: mark test as CLI test")
+
+    # Configure structlog for testing (avoid stdlib logger processors that expect 'name' attr)
+    _configure_test_logging()
+
+
+def _configure_test_logging() -> None:
+    """Configure structlog for test environment with compatible processors."""
+    # Use simpler processors that don't require stdlib logger attributes
+    processors = [
+        structlog.processors.TimeStamper(fmt="ISO"),
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.JSONRenderer(),
+    ]
+
+    structlog.configure(
+        processors=processors,
+        wrapper_class=structlog.BoundLogger,
+        logger_factory=structlog.PrintLoggerFactory(),
+        context_class=dict,
+        cache_logger_on_first_use=False,  # Disable caching in tests
+    )
 
 
 # ============================================================================
