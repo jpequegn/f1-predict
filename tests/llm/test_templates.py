@@ -119,7 +119,7 @@ class TestPromptTemplateManager:
     def test_render_string_with_error(self, manager):
         """Test error handling for invalid string template."""
         template_str = "Hello {{ name }"  # Invalid syntax
-        with pytest.raises(LLMTemplateError, match="Template rendering failed"):
+        with pytest.raises(LLMTemplateError, match="String template rendering failed"):
             manager.render_string(template_str, name="World")
 
     def test_get_template_method(self, manager):
@@ -155,7 +155,7 @@ class TestDefaultTemplates:
 
     def test_get_unknown_default_template(self):
         """Test error for unknown default template."""
-        with pytest.raises(ValueError, match="Unknown template"):
+        with pytest.raises(LLMTemplateError, match="No default template"):
             get_default_template("nonexistent_template")
 
 

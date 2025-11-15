@@ -4,9 +4,12 @@ Enables users to configure and run custom race simulations with parameter variat
 sensitivity analysis, and result visualization.
 """
 
+import io
 import logging
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
+import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
@@ -24,6 +27,12 @@ from f1_predict.simulation.analysis.sensitivity_analyzer import (
     ParameterSweep,
 )
 from f1_predict.simulation.analysis.sensitivity_report import SensitivityReport
+from f1_predict.web.utils.simulation_export import (
+    export_simulation_to_csv,
+    export_sensitivity_to_csv,
+    create_simulation_dataframe,
+    create_sensitivity_dataframe,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -344,6 +353,34 @@ def display_simulation_results(result, drivers: List[DriverState]) -> None:
 
     st.dataframe(results_data, use_container_width=True)
 
+    # Export options
+    col1, col2 = st.columns(2)
+    with col1:
+        csv_data = export_simulation_to_csv(result, [
+            {"driver_id": d.driver_id, "driver_name": d.driver_name} for d in drivers
+        ])
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_data,
+            file_name=f"simulation_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+        )
+
+    with col2:
+        df = create_simulation_dataframe(result, [
+            {"driver_id": d.driver_id, "driver_name": d.driver_name} for d in drivers
+        ])
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Results', index=False)
+        excel_buffer.seek(0)
+        st.download_button(
+            label="📊 Download Excel",
+            data=excel_buffer.getvalue(),
+            file_name=f"simulation_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
     # Visualizations
     col1, col2 = st.columns(2)
 
@@ -563,6 +600,30 @@ def display_sensitivity_results(result) -> None:
     # Summary
     st.subheader("📋 Summary")
     st.markdown(report.generate_summary_text())
+
+    # Export options
+    col1, col2 = st.columns(2)
+    with col1:
+        csv_data = export_sensitivity_to_csv(result)
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_data,
+            file_name=f"sensitivity_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+        )
+
+    with col2:
+        df = create_sensitivity_dataframe(result)
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Sensitivity', index=False)
+        excel_buffer.seek(0)
+        st.download_button(
+            label="📊 Download Excel",
+            data=excel_buffer.getvalue(),
+            file_name=f"sensitivity_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
 
     # Tornado chart
     col1, col2 = st.columns(2)

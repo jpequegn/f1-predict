@@ -145,6 +145,27 @@ class PromptTemplateManager:
             self.logger.error("template_validation_error", template=template_name, error=str(e))
             raise LLMTemplateError(msg) from e
 
+    def get_template(self, template_name: str) -> "Template":
+        """Get a template object directly.
+
+        Args:
+            template_name: Name of template file
+
+        Returns:
+            Jinja2 Template object
+
+        Raises:
+            LLMTemplateError: If template not found or invalid
+        """
+        try:
+            template = self.env.get_template(template_name)
+            self.logger.debug("template_retrieved", template=template_name)
+            return template
+        except TemplateError as e:
+            msg = f"Template retrieval failed for {template_name}: {e}"
+            self.logger.error("template_retrieval_error", template=template_name, error=str(e))
+            raise LLMTemplateError(msg) from e
+
 
 # Pre-defined templates as fallbacks if files don't exist
 DEFAULT_TEMPLATES = {
