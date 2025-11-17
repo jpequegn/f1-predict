@@ -53,6 +53,7 @@ dependencies = [
 
     # Deep learning
     "torch>=2.0.0",
+    "torchvision>=0.16.0",
     "pytorch-lightning>=2.0.0",
 
     # Web scraping and APIs
