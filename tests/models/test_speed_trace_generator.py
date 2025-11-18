@@ -1,10 +1,9 @@
 """Tests for speed trace generator module."""
 
-import json
-import pytest
-import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
+
+import pytest
 
 from f1_predict.models.speed_trace_generator import SpeedTraceGenerator
 

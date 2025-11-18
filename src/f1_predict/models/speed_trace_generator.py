@@ -1,9 +1,11 @@
 """Speed trace generator for creating synthetic race visualizations."""
 
+import logging
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import matplotlib.pyplot as plt
+
+logger = logging.getLogger(__name__)
 
 
 class SpeedTraceGenerator:
@@ -25,7 +27,7 @@ class SpeedTraceGenerator:
         self,
         race_id: str,
         driver_id: str,
-        lap_data: List[float]
+        lap_data: list[float]
     ) -> str:
         """Generate speed trace PNG for a single driver.
 
@@ -48,7 +50,7 @@ class SpeedTraceGenerator:
         try:
             numeric_data = [float(x) for x in lap_data]
         except (TypeError, ValueError) as e:
-            raise TypeError(f"lap_data must contain numeric values: {e}")
+            raise TypeError(f"lap_data must contain numeric values: {e}") from e
 
         # Create race-specific directory
         race_dir = self.output_dir / race_id
@@ -82,7 +84,7 @@ class SpeedTraceGenerator:
             fontsize=10,
             verticalalignment='top',
             horizontalalignment='right',
-            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+            bbox={'boxstyle': 'round', 'facecolor': 'wheat', 'alpha': 0.8}
         )
 
         # Save file
@@ -93,7 +95,7 @@ class SpeedTraceGenerator:
 
         return str(output_path)
 
-    def generate_batch(self, races: List[Dict]) -> Dict[str, str]:
+    def generate_batch(self, races: list[dict]) -> dict[str, str]:
         """Generate speed traces for multiple races.
 
         Args:
@@ -112,7 +114,7 @@ class SpeedTraceGenerator:
         Raises:
             KeyError: If race dict missing required fields
         """
-        results: Dict[str, str] = {}
+        results: dict[str, str] = {}
 
         for race in races:
             race_id = race['race_id']
@@ -128,7 +130,7 @@ class SpeedTraceGenerator:
                     results[key] = path
                 except (ValueError, TypeError) as e:
                     # Log and continue
-                    print(f"Warning: Failed to generate trace for {race_id}/{driver_id}: {e}")
+                    logger.warning(f"Failed to generate trace for {race_id}/{driver_id}: {e}")
                     continue
 
         return results
