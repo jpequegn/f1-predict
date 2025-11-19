@@ -56,21 +56,31 @@ class LocalProvider(BaseLLMProvider):
         Raises:
             TimeoutError: When request times out
             ProviderUnavailableError: When Ollama is unavailable
+            InvalidResponseError: When response is invalid
         """
         try:
-            # Build prompt with system message if provided
-            full_prompt = prompt
-            if system_prompt:
-                full_prompt = f"{system_prompt}\n\n{prompt}"
+            from f1_predict.llm.exceptions import InvalidResponseError
+
+            # Build request payload for Ollama API
+            options = {
+                "temperature": kwargs.get("temperature", self.config.temperature),
+            }
+
+            # Add max_tokens if provided
+            if "max_tokens" in kwargs:
+                options["num_predict"] = kwargs["max_tokens"]
+            elif hasattr(self.config, "max_tokens") and self.config.max_tokens:
+                options["num_predict"] = self.config.max_tokens
 
             payload = {
                 "model": self.config.model,
-                "prompt": full_prompt,
-                "temperature": kwargs.get("temperature", self.config.temperature),
+                "prompt": prompt,
+                "system": system_prompt or "",
+                "options": options,
                 "stream": False,
             }
 
-            self.logger.debug("local_request_started", **payload)
+            self.logger.debug("local_request_started", model=self.config.model)
 
             # Make API call to Ollama
             response = await self.client.post(
@@ -79,11 +89,17 @@ class LocalProvider(BaseLLMProvider):
             response.raise_for_status()
 
             data = response.json()
+
+            # Validate response has required fields
+            if "response" not in data:
+                msg = "Invalid response from Ollama: missing 'response' field"
+                raise InvalidResponseError(msg)
+
             content = data.get("response", "")
 
-            # Local models are free, so cost is 0
-            input_tokens = self.count_tokens(full_prompt)
-            output_tokens = self.count_tokens(content)
+            # Use actual token counts from response if available, otherwise estimate
+            input_tokens = data.get("prompt_eval_count") or self.count_tokens(prompt)
+            output_tokens = data.get("eval_count") or self.count_tokens(content)
             total_tokens = input_tokens + output_tokens
 
             llm_response = LLMResponse(
@@ -136,19 +152,28 @@ class LocalProvider(BaseLLMProvider):
             ProviderUnavailableError: When Ollama is unavailable
         """
         try:
-            # Build prompt with system message if provided
-            full_prompt = prompt
-            if system_prompt:
-                full_prompt = f"{system_prompt}\n\n{prompt}"
+            import json
+
+            # Build request payload for Ollama API
+            options = {
+                "temperature": kwargs.get("temperature", self.config.temperature),
+            }
+
+            # Add max_tokens if provided
+            if "max_tokens" in kwargs:
+                options["num_predict"] = kwargs["max_tokens"]
+            elif hasattr(self.config, "max_tokens") and self.config.max_tokens:
+                options["num_predict"] = self.config.max_tokens
 
             payload = {
                 "model": self.config.model,
-                "prompt": full_prompt,
-                "temperature": kwargs.get("temperature", self.config.temperature),
+                "prompt": prompt,
+                "system": system_prompt or "",
+                "options": options,
                 "stream": True,
             }
 
-            self.logger.debug("local_streaming_started", **payload)
+            self.logger.debug("local_streaming_started", model=self.config.model)
 
             # Make streaming API call
             async with self.client.stream(
@@ -157,8 +182,6 @@ class LocalProvider(BaseLLMProvider):
                 response.raise_for_status()
                 async for line in response.aiter_lines():
                     if line:
-                        import json
-
                         data = json.loads(line)
                         if "response" in data:
                             yield data["response"]
