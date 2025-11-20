@@ -161,20 +161,21 @@ class TestAnthropicProvider:
     @pytest.mark.asyncio
     async def test_generate_streaming(self, provider):
         """Test streaming generation."""
-        async def mock_stream():
+        async def mock_text_stream():
             chunks = ["Hello", " ", "world", "!"]
             for chunk in chunks:
-                mock_event = MagicMock()
-                mock_event.type = "content_block_delta"
-                mock_event.delta.text = chunk
-                yield mock_event
+                yield chunk
 
-        with patch.object(provider.client.messages, "stream", new_callable=AsyncMock) as mock_stream_method:
-            mock_context = MagicMock()
-            mock_context.__aenter__ = AsyncMock(return_value=mock_stream())
-            mock_context.__aexit__ = AsyncMock(return_value=None)
-            mock_stream_method.return_value = mock_context
+        # Create mock stream object with text_stream async generator
+        mock_stream_obj = MagicMock()
+        mock_stream_obj.text_stream = mock_text_stream()
 
+        # Create async context manager that returns the mock stream
+        mock_context = MagicMock()
+        mock_context.__aenter__ = AsyncMock(return_value=mock_stream_obj)
+        mock_context.__aexit__ = AsyncMock(return_value=None)
+
+        with patch.object(provider.client.messages, "stream", return_value=mock_context) as mock_stream_method:
             collected = []
             async for chunk in provider.generate_streaming(prompt="Test"):
                 collected.append(chunk)
