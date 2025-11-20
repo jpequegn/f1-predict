@@ -1,48 +1,120 @@
-"""Chat interface page for F1 Race Predictor web app."""
+"""Chat interface page for F1 Race Predictor web app with LLM integration."""
 
+import asyncio
 import uuid
+from typing import Optional
 
 import streamlit as st
 
+from f1_predict.llm.base import LLMConfig
+from f1_predict.llm.chat_session import ChatSession, ChatSessionManager
+from f1_predict.llm.explanations import F1PredictionExplainer
+from f1_predict.llm.anthropic_provider import AnthropicProvider
+from f1_predict.llm.openai_provider import OpenAIProvider
+from f1_predict.llm.local_provider import LocalProvider
+from f1_predict.llm.exceptions import LLMError
+
 
 def show_chat_page() -> None:
-    """Display the LLM-powered chat interface."""
+    """Display the LLM-powered chat interface with real LLM integration."""
     st.title("💬 F1 Chat Assistant")
 
-    # Initialize chat history
+    # Sidebar settings
+    with st.sidebar:
+        st.markdown("### ⚙️ LLM Settings")
+
+        # Model selection
+        model_provider = st.selectbox(
+            "AI Model Provider",
+            options=["Claude 3.5 (Anthropic)", "GPT-4 (OpenAI)", "Local LLM (Ollama)"],
+            index=0,
+            help="Select which LLM provider to use"
+        )
+
+        # Temperature control
+        temperature = st.slider(
+            "Creativity (Temperature)",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.7,
+            step=0.1,
+            help="Higher values = more creative, lower = more focused"
+        )
+
+        # Max tokens
+        max_tokens = st.slider(
+            "Response Length",
+            min_value=100,
+            max_value=2000,
+            value=500,
+            step=100,
+        )
+
+        st.markdown("---")
+        st.markdown("### 💡 Suggested Queries")
+
+        suggestions = [
+            "Who will win the next race?",
+            "Compare Max Verstappen and Lewis Hamilton",
+            "Show Red Bull's 2024 season performance",
+            "Explain this driver's qualifying record",
+            "Analyze the championship standings",
+            "Which driver performs best in wet conditions?",
+        ]
+
+        for suggestion in suggestions:
+            if st.button(suggestion, key=f"suggestion_{hash(suggestion)}"):
+                st.session_state.prompt_input = suggestion
+                st.rerun()
+
+        st.markdown("---")
+
+        # Session management
+        st.markdown("### 📋 Session Management")
+        if st.button("🗑️ Clear Chat History"):
+            st.session_state.chat_messages = []
+            st.session_state.conversation_id = str(uuid.uuid4())
+            st.rerun()
+
+        # Cost tracking
+        if "total_cost" in st.session_state:
+            st.metric("Session Cost", f"${st.session_state.total_cost:.4f}")
+
+        if "token_count" in st.session_state:
+            st.metric("Tokens Used", st.session_state.token_count)
+
+    # Initialize session state
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = []
         st.session_state.conversation_id = str(uuid.uuid4())
+        st.session_state.llm_session = None
+        st.session_state.total_cost = 0.0
+        st.session_state.token_count = 0
+        st.session_state.prompt_input = ""
 
-    # Chat container with history
-    chat_container = st.container()
+    # Initialize LLM provider if not done
+    if st.session_state.llm_session is None:
+        st.session_state.llm_session = _initialize_llm_session(
+            model_provider, temperature, max_tokens
+        )
 
     # Display chat history
-    with chat_container:
-        for message in st.session_state.chat_messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-
-                # Display attachments if any
-                if "attachments" in message and message["attachments"]:
-                    for attachment in message["attachments"]:
-                        if attachment["type"] == "metric":
-                            st.metric(
-                                attachment.get("label", ""),
-                                attachment.get("value", ""),
-                            )
-                        elif attachment["type"] == "table":
-                            st.dataframe(attachment["data"], use_container_width=True)
+    for message in st.session_state.chat_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
     st.markdown("---")
 
     # Chat input
-    col1, col2 = st.columns([6, 1])
+    prompt = st.chat_input(
+        "Ask about F1 predictions, statistics, or race analysis...",
+        key="chat_input"
+    )
 
-    with col1:
-        prompt = st.chat_input(
-            "Ask about F1 predictions, statistics, or race analysis..."
-        )
+    # Handle suggested query
+    if st.session_state.prompt_input:
+        prompt = st.session_state.prompt_input
+        st.session_state.prompt_input = ""
 
     if prompt:
         # Add user message
@@ -52,189 +124,134 @@ def show_chat_page() -> None:
             st.markdown(prompt)
 
         # Generate response
-        with st.chat_message("assistant"), st.spinner("Thinking..."):
-            response, attachments = generate_chat_response(
-                prompt,
-                st.session_state.conversation_id,
-            )
+        with st.chat_message("assistant"):
+            try:
+                # Run async function in Streamlit context
+                response, cost, tokens = asyncio.run(_generate_llm_response(
+                    prompt,
+                    st.session_state.llm_session,
+                ))
 
-            st.markdown(response)
+                st.markdown(response)
 
-            # Display attachments
-            if attachments:
-                for attachment in attachments:
-                    if attachment["type"] == "metric":
-                        st.metric(
-                            attachment.get("label", ""),
-                            attachment.get("value", ""),
-                        )
-                    elif attachment["type"] == "table":
-                        st.dataframe(attachment["data"], use_container_width=True)
-
-            # Add assistant message
-            st.session_state.chat_messages.append(
-                {
+                # Add assistant message with metadata
+                st.session_state.chat_messages.append({
                     "role": "assistant",
                     "content": response,
-                    "attachments": attachments,
-                }
-            )
+                    "cost": cost,
+                    "tokens": tokens,
+                })
 
-        # Rerun to update chat display
+                # Update session cost and token tracking
+                st.session_state.total_cost += cost
+                st.session_state.token_count += tokens
+
+                # Show cost and tokens if available
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.caption(f"💰 Cost: ${cost:.4f}")
+                with col2:
+                    st.caption(f"📊 Tokens: {tokens}")
+
+            except LLMError as e:
+                st.error(f"LLM Error: {str(e)}")
+            except Exception as e:
+                st.error(f"Error generating response: {str(e)}")
+
         st.rerun()
 
-    # Sidebar with suggested queries
-    with st.sidebar:
-        st.markdown("### 💡 Suggested Queries")
 
-        suggestions = [
-            "Who will win the next race?",
-            "Compare Max Verstappen and Lewis Hamilton",
-            "Show Red Bull's 2024 season performance",
-            "What's the weather forecast for Monaco?",
-            "Analyze the current championship standings",
-            "Which driver has the best qualifying record?",
-        ]
+def _initialize_llm_session(
+    model_provider: str,
+    temperature: float,
+    max_tokens: int,
+) -> Optional[ChatSession]:
+    """Initialize LLM provider and ChatSession.
 
-        for suggestion in suggestions:
-            if st.button(suggestion, key=f"suggestion_{hash(suggestion)}"):
-                # Add suggestion to chat
-                st.session_state.chat_messages.append(
-                    {"role": "user", "content": suggestion}
-                )
-                st.rerun()
+    Args:
+        model_provider: Selected LLM provider
+        temperature: Temperature setting
+        max_tokens: Maximum tokens for response
 
-        # Settings
-        st.markdown("---")
-        st.markdown("### ⚙️ Chat Settings")
-
-        st.selectbox(
-            "AI Model",
-            options=["GPT-4", "Claude 3", "Local LLM"],
-            index=1,
+    Returns:
+        Initialized ChatSession or None if provider unavailable
+    """
+    try:
+        # Create configuration
+        config = LLMConfig(
+            model=_get_model_name(model_provider),
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
 
-        st.slider(
-            "Creativity",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.7,
-            step=0.1,
-        )
+        # Initialize provider
+        if "Claude" in model_provider:
+            import os
+            api_key = os.getenv("ANTHROPIC_API_KEY")
+            if not api_key:
+                st.warning("Anthropic API key not found. Please set ANTHROPIC_API_KEY.")
+                return None
+            provider = AnthropicProvider(config, api_key)
+        elif "GPT" in model_provider:
+            import os
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                st.warning("OpenAI API key not found. Please set OPENAI_API_KEY.")
+                return None
+            provider = OpenAIProvider(config, api_key)
+        elif "Local" in model_provider:
+            provider = LocalProvider(config, endpoint="http://localhost:11434")
+        else:
+            return None
 
-        # Clear chat history button
-        if st.button("🗑️ Clear Chat History"):
-            st.session_state.chat_messages = []
-            st.session_state.conversation_id = str(uuid.uuid4())
-            st.rerun()
+        # Create ChatSession
+        return ChatSession(session_id=st.session_state.conversation_id, provider=provider)
+
+    except Exception as e:
+        st.error(f"Failed to initialize LLM: {str(e)}")
+        return None
 
 
-def generate_chat_response(
+def _get_model_name(model_provider: str) -> str:
+    """Get model name from provider selection.
+
+    Args:
+        model_provider: User's provider selection
+
+    Returns:
+        Model name string
+    """
+    if "Claude" in model_provider:
+        return "claude-3-5-sonnet-20241022"
+    elif "GPT-4" in model_provider:
+        return "gpt-4"
+    elif "Local" in model_provider:
+        return "llama3.1"
+    return "gpt-3.5-turbo"
+
+
+async def _generate_llm_response(
     prompt: str,
-    conversation_id: str,
-) -> tuple[str, list]:
-    """Generate AI response to chat prompt.
+    llm_session: ChatSession,
+) -> tuple[str, float, int]:
+    """Generate response using actual LLM provider via ChatSession.
 
     Args:
         prompt: User's chat message
-        conversation_id: Unique conversation ID for context
+        llm_session: Initialized ChatSession with provider
 
     Returns:
-        Tuple of (response_text, attachments_list)
+        Tuple of (response_text, estimated_cost, total_tokens)
     """
-    # Mock responses based on prompts
-    prompt_lower = prompt.lower()
+    if not llm_session or not llm_session.provider:
+        raise LLMError("LLM session not initialized")
 
-    attachments = []
+    # Generate response using provider
+    response = await llm_session.provider.generate(prompt=prompt)
 
-    # Mock responses for different queries
-    if "win" in prompt_lower and "race" in prompt_lower:
-        response = (
-            "Based on recent form and historical data, Max Verstappen has a 65% "
-            "probability of winning the next race. Lewis Hamilton follows with 45% "
-            "and Charles Leclerc at 38%. These predictions factor in current car "
-            "performance, driver form, and circuit characteristics."
-        )
-        attachments = [
-            {
-                "type": "metric",
-                "label": "Max Verstappen",
-                "value": "65%",
-            },
-            {
-                "type": "metric",
-                "label": "Lewis Hamilton",
-                "value": "45%",
-            },
-        ]
+    # Extract metadata
+    content = response.content
+    cost = response.estimated_cost
+    tokens = response.total_tokens
 
-    elif "compare" in prompt_lower:
-        response = (
-            "Based on 2024 season statistics:\n\n"
-            "**Max Verstappen:** 15 wins, 87.2 avg points per race\n"
-            "**Lewis Hamilton:** 8 wins, 72.5 avg points per race\n\n"
-            "Verstappen has a significant advantage in both wins and consistency "
-            "this season. His race pace is particularly strong on high-speed circuits."
-        )
-
-    elif "red bull" in prompt_lower or "team" in prompt_lower:
-        response = (
-            "Red Bull Racing is currently leading the 2024 Constructor Championship "
-            "with 512 points. Key strengths:\n"
-            "- Exceptional high-speed performance\n"
-            "- Strategic pit stop execution\n"
-            "- Strong driver lineup consistency\n\n"
-            "Their car development has focused on aerodynamic efficiency, "
-            "giving them an edge in dry conditions."
-        )
-
-    elif "weather" in prompt_lower or "forecast" in prompt_lower:
-        response = (
-            "Weather can significantly impact race outcomes. For circuits like "
-            "Monaco or Singapore, unpredictability is higher. Current forecasts "
-            "suggest stable conditions for the upcoming races, favoring consistent "
-            "performers like Mercedes and Red Bull."
-        )
-
-    elif "standings" in prompt_lower or "championship" in prompt_lower:
-        response = "Current 2024 Championship Standings:"
-        attachments = [
-            {
-                "type": "table",
-                "data": {
-                    "Position": [1, 2, 3, 4, 5],
-                    "Driver": [
-                        "Max Verstappen",
-                        "Lewis Hamilton",
-                        "Charles Leclerc",
-                        "Lando Norris",
-                        "Carlos Sainz",
-                    ],
-                    "Points": [310, 275, 245, 210, 195],
-                    "Wins": [15, 8, 5, 3, 2],
-                },
-            }
-        ]
-
-    elif "qualify" in prompt_lower:
-        response = (
-            "Qualifying performance analysis shows Max Verstappen leads with "
-            "15 pole positions in 2024. His qualifying pace is particularly strong "
-            "on street circuits (Monaco, Singapore) and technical layouts (Hungary, "
-            "Silverstone). Lewis Hamilton averages pole positions on power circuits "
-            "like Monza and high-speed corners."
-        )
-
-    else:
-        response = (
-            "I can help you with F1 predictions, statistics, driver comparisons, "
-            "and race analysis. Feel free to ask about:\n\n"
-            "- **Predictions:** Who will win the next race?\n"
-            "- **Comparisons:** Compare any two drivers or teams\n"
-            "- **Statistics:** Championship standings, historical records\n"
-            "- **Analysis:** Why a driver performs better at certain circuits\n"
-            "- **Weather:** How weather impacts races\n\n"
-            "What would you like to know?"
-        )
-
-    return response, attachments
+    return content, cost, tokens
