@@ -123,7 +123,9 @@ class TestAnthropicProvider:
     async def test_generate_rate_limit_error(self, provider):
         """Test rate limit error handling."""
         with patch.object(provider.client.messages, "create", new_callable=AsyncMock) as mock_create:
-            mock_create.side_effect = AnthropicRateLimitError("Rate limit exceeded")
+            # Create proper APIStatusError with required arguments
+            error = AnthropicRateLimitError("Rate limit exceeded", response=MagicMock(), body={})
+            mock_create.side_effect = error
 
             with pytest.raises(RateLimitError, match="rate limit"):
                 await provider.generate(prompt="Test")
@@ -132,7 +134,9 @@ class TestAnthropicProvider:
     async def test_generate_auth_error(self, provider):
         """Test authentication error handling."""
         with patch.object(provider.client.messages, "create", new_callable=AsyncMock) as mock_create:
-            mock_create.side_effect = AnthropicAuthError("Invalid API key")
+            # Create proper APIStatusError with required arguments
+            error = AnthropicAuthError("Invalid API key", response=MagicMock(), body={})
+            mock_create.side_effect = error
 
             with pytest.raises(AuthenticationError, match="authentication"):
                 await provider.generate(prompt="Test")
@@ -141,12 +145,17 @@ class TestAnthropicProvider:
     async def test_generate_invalid_response(self, provider):
         """Test invalid response handling."""
         mock_response = MagicMock()
-        mock_response.content = []  # Empty content
+        # Simulate response with empty content
+        mock_content_obj = MagicMock()
+        mock_content_obj.text = ""  # Empty text
+        mock_response.content = [mock_content_obj]
+        mock_response.usage.input_tokens = 10
+        mock_response.usage.output_tokens = 0
 
         with patch.object(provider.client.messages, "create", new_callable=AsyncMock) as mock_create:
             mock_create.return_value = mock_response
 
-            with pytest.raises(InvalidResponseError, match="No response"):
+            with pytest.raises(InvalidResponseError, match="Empty response"):
                 await provider.generate(prompt="Test")
 
     @pytest.mark.asyncio
