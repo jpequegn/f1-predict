@@ -117,7 +117,7 @@ class TestOpenAIProvider:
     async def test_generate_rate_limit_error(self, provider):
         """Test rate limit error handling."""
         with patch.object(provider.client.chat.completions, "create", new_callable=AsyncMock) as mock_create:
-            mock_create.side_effect = OpenAIRateLimitError("Rate limit exceeded")
+            mock_create.side_effect = OpenAIRateLimitError("Rate limit exceeded", response=MagicMock(), body={})
 
             with pytest.raises(RateLimitError, match="rate limit"):
                 await provider.generate(prompt="Test")
@@ -126,7 +126,7 @@ class TestOpenAIProvider:
     async def test_generate_auth_error(self, provider):
         """Test authentication error handling."""
         with patch.object(provider.client.chat.completions, "create", new_callable=AsyncMock) as mock_create:
-            mock_create.side_effect = OpenAIAuthError("Invalid API key")
+            mock_create.side_effect = OpenAIAuthError("Invalid API key", response=MagicMock(), body={})
 
             with pytest.raises(AuthenticationError, match="authentication"):
                 await provider.generate(prompt="Test")
@@ -140,7 +140,7 @@ class TestOpenAIProvider:
         with patch.object(provider.client.chat.completions, "create", new_callable=AsyncMock) as mock_create:
             mock_create.return_value = mock_response
 
-            with pytest.raises(InvalidResponseError, match="No response"):
+            with pytest.raises(InvalidResponseError, match="No response choices"):
                 await provider.generate(prompt="Test")
 
     @pytest.mark.asyncio

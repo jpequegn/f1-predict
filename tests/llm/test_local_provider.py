@@ -135,21 +135,26 @@ class TestLocalProvider:
     @pytest.mark.asyncio
     async def test_generate_streaming(self, provider):
         """Test streaming generation."""
-        async def mock_stream():
+        async def mock_aiter_lines():
             responses = [
-                b'{"response": "Hello"}\n',
-                b'{"response": " world"}\n',
-                b'{"response": "!"}\n',
+                '{"response": "Hello"}',
+                '{"response": " world"}',
+                '{"response": "!"}',
             ]
             for resp in responses:
                 yield resp
 
+        # Create mock response with aiter_lines method returning async generator
         mock_response = MagicMock()
-        mock_response.aiter_lines = mock_stream
+        mock_response.aiter_lines = MagicMock(return_value=mock_aiter_lines())
+        mock_response.raise_for_status = MagicMock()
 
-        with patch.object(provider.client, "post", new_callable=AsyncMock) as mock_post:
-            mock_post.return_value = mock_response
+        # Create async context manager
+        mock_context = MagicMock()
+        mock_context.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_context.__aexit__ = AsyncMock(return_value=None)
 
+        with patch.object(provider.client, "stream", return_value=mock_context) as mock_stream:
             collected = []
             async for chunk in provider.generate_streaming(prompt="Test"):
                 collected.append(chunk)

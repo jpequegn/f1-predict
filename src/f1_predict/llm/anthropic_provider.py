@@ -7,7 +7,14 @@ Claude 3.5 Sonnet and other Claude models with proper error handling.
 from typing import Any, AsyncIterator, Optional
 
 import structlog
-from anthropic import AI_PROMPT, HUMAN_PROMPT, AsyncAnthropic, AnthropicError
+from anthropic import (
+    AI_PROMPT,
+    HUMAN_PROMPT,
+    AsyncAnthropic,
+    AnthropicError,
+    RateLimitError as AnthropicRateLimitError,
+    AuthenticationError as AnthropicAuthError,
+)
 
 from f1_predict.llm.base import BaseLLMProvider, LLMConfig, LLMResponse
 from f1_predict.llm.exceptions import (
@@ -125,16 +132,22 @@ class AnthropicProvider(BaseLLMProvider):
 
             return llm_response
 
+        except AnthropicRateLimitError as e:
+            self.logger.error(
+                "anthropic_error", error=str(e), error_type="RateLimitError"
+            )
+            raise RateLimitError(f"Anthropic rate limit exceeded: {e}") from e
+        except AnthropicAuthError as e:
+            self.logger.error(
+                "anthropic_error", error=str(e), error_type="AuthenticationError"
+            )
+            raise AuthenticationError(f"Anthropic authentication failed: {e}") from e
         except AnthropicError as e:
             self.logger.error(
                 "anthropic_error", error=str(e), error_type=type(e).__name__
             )
             error_message = str(e)
-            if "rate_limit" in error_message.lower() or "429" in error_message:
-                raise RateLimitError(f"Anthropic rate limit exceeded: {e}") from e
-            elif "authentication" in error_message.lower() or "401" in error_message:
-                raise AuthenticationError(f"Anthropic authentication failed: {e}") from e
-            elif "timeout" in error_message.lower():
+            if "timeout" in error_message.lower():
                 raise TimeoutError(f"Anthropic request timed out: {e}") from e
             elif "500" in error_message or "503" in error_message:
                 raise ProviderUnavailableError(
@@ -185,16 +198,22 @@ class AnthropicProvider(BaseLLMProvider):
                 async for text in stream.text_stream:
                     yield text
 
+        except AnthropicRateLimitError as e:
+            self.logger.error(
+                "anthropic_streaming_error", error=str(e), error_type="RateLimitError"
+            )
+            raise RateLimitError(f"Anthropic rate limit exceeded: {e}") from e
+        except AnthropicAuthError as e:
+            self.logger.error(
+                "anthropic_streaming_error", error=str(e), error_type="AuthenticationError"
+            )
+            raise AuthenticationError(f"Anthropic authentication failed: {e}") from e
         except AnthropicError as e:
             self.logger.error(
                 "anthropic_streaming_error", error=str(e), error_type=type(e).__name__
             )
             error_message = str(e)
-            if "rate_limit" in error_message.lower():
-                raise RateLimitError(f"Anthropic rate limit exceeded: {e}") from e
-            elif "authentication" in error_message.lower():
-                raise AuthenticationError(f"Anthropic authentication failed: {e}") from e
-            elif "timeout" in error_message.lower():
+            if "timeout" in error_message.lower():
                 raise TimeoutError(f"Anthropic request timed out: {e}") from e
             else:
                 raise ProviderUnavailableError(f"Anthropic service error: {e}") from e

@@ -7,7 +7,12 @@ and other OpenAI models with proper error handling and cost tracking.
 from typing import Any, AsyncIterator, Optional
 
 import structlog
-from openai import AsyncOpenAI, OpenAIError
+from openai import (
+    AsyncOpenAI,
+    OpenAIError,
+    RateLimitError as OpenAIRateLimitError,
+    AuthenticationError as OpenAIAuthError,
+)
 
 from f1_predict.llm.base import BaseLLMProvider, LLMConfig, LLMResponse
 from f1_predict.llm.exceptions import (
@@ -102,6 +107,10 @@ class OpenAIProvider(BaseLLMProvider):
             response = await self.client.chat.completions.create(**params)
 
             # Extract response data
+            if not response.choices:
+                msg = "No response choices from OpenAI"
+                raise InvalidResponseError(msg)
+
             content = response.choices[0].message.content
             if not content:
                 msg = "Empty response from OpenAI"
@@ -136,15 +145,17 @@ class OpenAIProvider(BaseLLMProvider):
 
             return llm_response
 
+        except OpenAIRateLimitError as e:
+            self.logger.error("openai_error", error=str(e), error_type="RateLimitError")
+            raise RateLimitError(f"OpenAI rate limit exceeded: {e}") from e
+        except OpenAIAuthError as e:
+            self.logger.error("openai_error", error=str(e), error_type="AuthenticationError")
+            raise AuthenticationError(f"OpenAI authentication failed: {e}") from e
         except OpenAIError as e:
             self.logger.error("openai_error", error=str(e), error_type=type(e).__name__)
             # Map OpenAI errors to our custom exceptions
             error_message = str(e)
-            if "rate_limit" in error_message.lower():
-                raise RateLimitError(f"OpenAI rate limit exceeded: {e}") from e
-            elif "authentication" in error_message.lower() or "api_key" in error_message.lower():
-                raise AuthenticationError(f"OpenAI authentication failed: {e}") from e
-            elif "timeout" in error_message.lower():
+            if "timeout" in error_message.lower():
                 raise TimeoutError(f"OpenAI request timed out: {e}") from e
             elif "server_error" in error_message.lower() or "service_unavailable" in error_message.lower():
                 raise ProviderUnavailableError(f"OpenAI service unavailable: {e}") from e
@@ -198,16 +209,22 @@ class OpenAIProvider(BaseLLMProvider):
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
 
+        except OpenAIRateLimitError as e:
+            self.logger.error(
+                "openai_streaming_error", error=str(e), error_type="RateLimitError"
+            )
+            raise RateLimitError(f"OpenAI rate limit exceeded: {e}") from e
+        except OpenAIAuthError as e:
+            self.logger.error(
+                "openai_streaming_error", error=str(e), error_type="AuthenticationError"
+            )
+            raise AuthenticationError(f"OpenAI authentication failed: {e}") from e
         except OpenAIError as e:
             self.logger.error(
                 "openai_streaming_error", error=str(e), error_type=type(e).__name__
             )
             error_message = str(e)
-            if "rate_limit" in error_message.lower():
-                raise RateLimitError(f"OpenAI rate limit exceeded: {e}") from e
-            elif "authentication" in error_message.lower():
-                raise AuthenticationError(f"OpenAI authentication failed: {e}") from e
-            elif "timeout" in error_message.lower():
+            if "timeout" in error_message.lower():
                 raise TimeoutError(f"OpenAI request timed out: {e}") from e
             else:
                 raise ProviderUnavailableError(f"OpenAI service error: {e}") from e
