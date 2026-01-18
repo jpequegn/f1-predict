@@ -1,0 +1,78 @@
+Analyze the current F1 World Championship situation:
+
+**Season Context:**
+- Season: {{ season }}
+- Round: {{ current_round }} of {{ total_rounds }}
+- Races Remaining: {{ races_remaining }}
+
+**Drivers' Championship Standings:**
+{% for standing in driver_standings %}
+{{ standing.position }}. {{ standing.driver }} ({{ standing.team }}) - {{ standing.points }} points{% if standing.gap_to_leader %} ({{ standing.gap_to_leader }}){% endif %}
+{% endfor %}
+
+**Constructors' Championship Standings:**
+{% for standing in constructor_standings %}
+{{ standing.position }}. {{ standing.team }} - {{ standing.points }} points{% if standing.gap_to_leader %} ({{ standing.gap_to_leader }}){% endif %}
+{% endfor %}
+
+{% if recent_results %}
+**Recent Form (Last 3 Races):**
+{% for race in recent_results %}
+- {{ race.name }}: {{ race.summary }}
+{% endfor %}
+{% endif %}
+
+{% if upcoming_races %}
+**Upcoming Races:**
+{% for race in upcoming_races[:3] %}
+- {{ race.name }} ({{ race.date }})
+{% endfor %}
+{% endif %}
+
+{% if ml_predictions %}
+**ML Championship Predictions:**
+- Predicted Drivers' Champion: {{ ml_predictions.drivers_champion }} ({{ ml_predictions.drivers_confidence }}% confidence)
+- Predicted Constructors' Champion: {{ ml_predictions.constructors_champion }} ({{ ml_predictions.constructors_confidence }}% confidence)
+{% endif %}
+
+**Task:**
+Write a 400-500 word championship analysis that includes:
+
+1. **Overview** (2-3 sentences)
+   - Current state of both championships
+   - Key narrative of the season so far
+
+2. **Drivers' Championship Battle** (4-5 sentences)
+   - Leader's position and recent performance
+   - Main challengers and their title hopes
+   - Points gaps and mathematical scenarios
+
+3. **Constructors' Championship** (3-4 sentences)
+   - Team battle dynamics
+   - Impact of driver pairings
+   - Development race implications
+
+4. **Form Analysis** (3-4 sentences)
+   - Who has momentum?
+   - Teams improving/declining
+   - Mid-season upgrades impact
+
+5. **Key Races Ahead** (2-3 sentences)
+   - Crucial upcoming circuits
+   - How remaining calendar favors/hurts contenders
+
+6. **Mathematical Scenarios** (2-3 sentences)
+   - What does each contender need?
+   - Realistic vs theoretical title chances
+
+7. **Wild Cards** (2-3 sentences)
+   - Variables that could swing the championship
+   - Reliability, team orders, weather, etc.
+
+8. **Prediction** (2-3 sentences)
+   - Your assessment of how the season will unfold
+   - Key factors to watch
+
+**Tone:** Analytical and insightful. Balance excitement with realistic assessment. Avoid hyperbole but engage the reader.
+
+**Important:** Base analysis on provided standings and data. Clearly distinguish between facts and predictions.

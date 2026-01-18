@@ -1,0 +1,85 @@
+Write a post-race analysis for the following F1 race:
+
+**Race Information:**
+- Race: {{ race_name }}
+- Circuit: {{ circuit_name }}
+- Date: {{ race_date }}
+- Laps: {{ total_laps }}
+{% if weather_conditions %}
+- Weather: {{ weather_conditions }}
+{% endif %}
+
+**Final Results (Top 10):**
+{% for result in results[:10] %}
+{{ result.position }}. {{ result.driver }} ({{ result.team }}) - {{ result.gap }}
+{% endfor %}
+
+**Podium Finishers:**
+{% for result in results[:3] %}
+- P{{ result.position }}: {{ result.driver }} - {{ result.time_or_gap }}
+{% endfor %}
+
+{% if key_moments %}
+**Key Moments:**
+{% for moment in key_moments %}
+- Lap {{ moment.lap }}: {{ moment.description }}
+{% endfor %}
+{% endif %}
+
+{% if strategy_summary %}
+**Strategy Summary:**
+{{ strategy_summary }}
+{% endif %}
+
+{% if fastest_lap %}
+**Fastest Lap:** {{ fastest_lap.driver }} - {{ fastest_lap.time }} (Lap {{ fastest_lap.lap }})
+{% endif %}
+
+{% if championship_standings %}
+**Updated Championship Standings (Top 5):**
+{% for standing in championship_standings[:5] %}
+{{ loop.index }}. {{ standing.driver }} - {{ standing.points }} points
+{% endfor %}
+{% endif %}
+
+**Task:**
+Write a 400-500 word post-race analysis that includes:
+
+1. **Race Summary** (2-3 sentences)
+   - Overall race narrative
+   - Dominant storyline of the day
+
+2. **Winner Analysis** (3-4 sentences)
+   - How did the winner secure victory?
+   - Key strategic decisions
+   - Standout moments from their drive
+
+3. **Podium Battles** (2-3 sentences per driver)
+   - P2 and P3 performance
+   - Any notable overtakes or defensive drives
+
+4. **Strategic Insights** (3-4 sentences)
+   - Tire strategies that worked/failed
+   - Key pit stop windows
+   - Team tactical decisions
+
+5. **Standout Performances** (2-3 drivers outside top 3)
+   - Overachievers
+   - Recovery drives
+   - Surprise results
+
+6. **Disappointments** (2-3 sentences)
+   - Underperformers
+   - Incidents or retirements
+
+7. **Championship Impact** (2-3 sentences)
+   - How this race affects the title fight
+   - Key points gained/lost
+
+8. **Looking Ahead** (1-2 sentences)
+   - Momentum heading into next race
+   - Key storylines to follow
+
+**Tone:** Analytical but engaging. Be factual and insightful. Provide context that helps fans understand why results happened, not just what happened.
+
+**Important:** Analyze only the provided data. Do not invent incidents or details not mentioned.
