@@ -1,0 +1,81 @@
+Generate a qualifying preview for the upcoming F1 session:
+
+**Session Information:**
+- Race: {{ race_name }}
+- Circuit: {{ circuit_name }}
+- Date: {{ qualifying_date }}
+- Session Time: {{ session_time }}
+
+**Circuit Characteristics:**
+- Track Length: {{ track_length }}
+- Qualifying Lap Record: {{ lap_record }}
+- Key Sectors: {{ sector_info }}
+{% if circuit_type %}
+- Circuit Type: {{ circuit_type }}
+{% endif %}
+
+**Weather Forecast:**
+- Temperature: {{ weather.temperature }}
+- Conditions: {{ weather.conditions }}
+- Rain Probability: {{ weather.rain_chance }}%
+
+**Practice Session Insights:**
+{% if practice_results %}
+**FP3 Top 10:**
+{% for driver in practice_results[:10] %}
+{{ loop.index }}. {{ driver.name }} - {{ driver.time }} ({{ driver.gap }})
+{% endfor %}
+{% endif %}
+
+{% if sector_times %}
+**Best Sector Times:**
+- Sector 1: {{ sector_times.s1_leader }}
+- Sector 2: {{ sector_times.s2_leader }}
+- Sector 3: {{ sector_times.s3_leader }}
+{% endif %}
+
+**ML Qualifying Predictions:**
+{% for prediction in predictions[:5] %}
+P{{ loop.index }}: {{ prediction.driver }} ({{ prediction.confidence }}% confidence)
+{% endfor %}
+
+{% if track_evolution %}
+**Track Evolution:** {{ track_evolution }}
+{% endif %}
+
+**Task:**
+Write a 300-400 word qualifying preview that includes:
+
+1. **Opening** (2-3 sentences)
+   - Set the scene for qualifying
+   - Key storyline or battle to watch
+
+2. **Track Analysis** (2-3 sentences)
+   - What makes this circuit challenging for qualifying
+   - Key corners and sectors for lap time gains
+
+3. **Weather Impact** (1-2 sentences)
+   - How conditions affect the session
+   - Any timing concerns (rain threat, track temperature)
+
+4. **Favorites Analysis** (3-4 sentences)
+   - Expected pole contenders based on practice
+   - Team strengths at this circuit
+   - ML predictions context
+
+5. **Dark Horses** (2-3 sentences)
+   - Drivers who could surprise
+   - Teams showing unexpected pace
+
+6. **Tactical Considerations** (2-3 sentences)
+   - Traffic management in Q3
+   - Tire strategy (new vs used sets)
+   - Slipstream opportunities
+
+7. **Pole Prediction** (2 sentences)
+   - Your call for pole position
+   - Key factor that will make the difference
+
+**Tone:** Build excitement while being informative. Focus on what makes qualifying compelling at this specific circuit.
+
+**Important:** Base predictions on provided practice data and ML insights. Acknowledge uncertainty appropriately.

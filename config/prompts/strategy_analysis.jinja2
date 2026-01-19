@@ -1,0 +1,87 @@
+Analyze the race strategy options for the following F1 race:
+
+**Race Information:**
+- Race: {{ race_name }}
+- Circuit: {{ circuit_name }}
+- Race Distance: {{ race_distance }}
+- Total Laps: {{ total_laps }}
+- Pit Lane Time Loss: {{ pit_lane_delta }}
+
+**Tire Compounds Available:**
+{% for compound in tire_compounds %}
+- {{ compound.name }}: {{ compound.expected_stint }} laps, {{ compound.degradation }} degradation
+{% endfor %}
+
+**Historical Strategy Data:**
+{% if historical_strategies %}
+{% for strategy in historical_strategies %}
+- {{ strategy.year }}: {{ strategy.winning_strategy }} ({{ strategy.pit_stops }} stops)
+{% endfor %}
+{% endif %}
+
+**Weather Forecast:**
+- Race Start: {{ weather.start_conditions }}
+- Mid-Race: {{ weather.mid_race }}
+- Rain Probability: {{ weather.rain_chance }}%
+
+{% if safety_car_probability %}
+**Safety Car Probability:** {{ safety_car_probability }}%
+{% endif %}
+
+{% if grid_positions %}
+**Grid Positions (Top 10):**
+{% for pos in grid_positions[:10] %}
+P{{ pos.position }}: {{ pos.driver }} ({{ pos.team }})
+{% endfor %}
+{% endif %}
+
+{% if undercut_overcut %}
+**Pit Stop Windows:**
+- Undercut Window: Lap {{ undercut_overcut.undercut_start }}-{{ undercut_overcut.undercut_end }}
+- Overcut Window: Lap {{ undercut_overcut.overcut_start }}-{{ undercut_overcut.overcut_end }}
+{% endif %}
+
+**Task:**
+Write a 400-500 word strategy analysis that includes:
+
+1. **Optimal Strategy** (3-4 sentences)
+   - Primary recommended strategy
+   - Expected stint lengths
+   - Why this strategy suits the circuit
+
+2. **Alternative Strategies** (3-4 sentences)
+   - Viable alternative approaches
+   - Aggressive vs conservative options
+   - When each would be advantageous
+
+3. **Tire Degradation Factors** (2-3 sentences)
+   - Circuit characteristics affecting tire wear
+   - High/low degradation corners
+   - Temperature sensitivity
+
+4. **Pit Stop Windows** (3-4 sentences)
+   - Undercut potential and timing
+   - Overcut opportunities
+   - Traffic management considerations
+
+5. **Grid Position Impact** (2-3 sentences)
+   - Strategy differences based on starting position
+   - Clean air vs traffic compromises
+
+6. **Variable Factors** (2-3 sentences)
+   - Safety car impact on strategy
+   - Weather contingencies
+   - Red flag scenarios
+
+7. **Team-Specific Insights** (2-3 sentences)
+   - Teams favoring aggressive strategies
+   - Teams with strong pit stops
+   - Historical tendencies
+
+8. **Key Calls to Watch** (2 sentences)
+   - Critical decision points
+   - Lap numbers to monitor
+
+**Tone:** Technical but accessible. Help fans understand the strategic complexity without overwhelming detail.
+
+**Important:** Base analysis on provided data. Clearly state when making assumptions or predictions.

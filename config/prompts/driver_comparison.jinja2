@@ -1,0 +1,66 @@
+Compare the following two F1 drivers based on their statistics and performance:
+
+**{{ driver1.name }}**
+- Team: {{ driver1.team }}
+- Wins: {{ driver1.wins }}
+- Podiums: {{ driver1.podiums }}
+- Points: {{ driver1.points }}
+- Qualifying Average: {{ driver1.qualifying_avg }}
+- Recent Form (last 5 races): {{ driver1.recent_form }}
+{% if driver1.career_highlights %}
+- Career Highlights: {{ driver1.career_highlights }}
+{% endif %}
+
+**{{ driver2.name }}**
+- Team: {{ driver2.team }}
+- Wins: {{ driver2.wins }}
+- Podiums: {{ driver2.podiums }}
+- Points: {{ driver2.points }}
+- Qualifying Average: {{ driver2.qualifying_avg }}
+- Recent Form (last 5 races): {{ driver2.recent_form }}
+{% if driver2.career_highlights %}
+- Career Highlights: {{ driver2.career_highlights }}
+{% endif %}
+
+{% if head_to_head %}
+**Head-to-Head Record:**
+{{ head_to_head }}
+{% endif %}
+
+{% if circuit_context %}
+**At {{ circuit_context.name }}:**
+- {{ driver1.name }}: {{ circuit_context.driver1_record }}
+- {{ driver2.name }}: {{ circuit_context.driver2_record }}
+{% endif %}
+
+**Task:**
+Provide a comprehensive comparison (300-400 words) that includes:
+
+1. **Overview** (2-3 sentences)
+   - Summarize the key differences in their current standings
+   - Set context for the comparison
+
+2. **Pace Analysis** (2-3 sentences)
+   - Compare qualifying performance
+   - Discuss one-lap speed and race pace
+
+3. **Consistency and Racecraft** (2-3 sentences)
+   - Points-scoring consistency
+   - Wheel-to-wheel racing ability
+   - Tire management
+
+4. **Team Context** (2-3 sentences)
+   - How their machinery affects their performance
+   - Relative performance vs teammates
+
+5. **Recent Momentum** (2-3 sentences)
+   - Who has the current advantage?
+   - Form trends over recent races
+
+6. **Verdict** (2-3 sentences)
+   - Overall assessment
+   - Situational advantages (wet weather, street circuits, etc.)
+
+**Tone:** Objective and analytical. Present facts without bias. Acknowledge strengths and weaknesses of both drivers fairly.
+
+**Important:** Base comparison only on provided statistics. Do not invent data or speculate beyond the evidence.

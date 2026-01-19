@@ -7,8 +7,8 @@ LLM prompts with variable interpolation and template validation.
 from pathlib import Path
 from typing import Any, Optional
 
-import structlog
 from jinja2 import Environment, FileSystemLoader, Template, TemplateError
+import structlog
 
 from f1_predict.llm.exceptions import TemplateError as LLMTemplateError
 
@@ -117,9 +117,7 @@ class PromptTemplateManager:
         if not self.templates_dir.exists():
             return []
 
-        templates = [
-            f.name for f in self.templates_dir.glob("*.jinja2")
-        ]
+        templates = [f.name for f in self.templates_dir.glob("*.jinja2")]
 
         self.logger.debug("templates_listed", count=len(templates))
         return templates
@@ -142,7 +140,9 @@ class PromptTemplateManager:
             return True
         except TemplateError as e:
             msg = f"Template validation failed for {template_name}: {e}"
-            self.logger.error("template_validation_error", template=template_name, error=str(e))
+            self.logger.error(
+                "template_validation_error", template=template_name, error=str(e)
+            )
             raise LLMTemplateError(msg) from e
 
     def get_template(self, template_name: str) -> "Template":
@@ -163,7 +163,9 @@ class PromptTemplateManager:
             return template
         except TemplateError as e:
             msg = f"Template retrieval failed for {template_name}: {e}"
-            self.logger.error("template_retrieval_error", template=template_name, error=str(e))
+            self.logger.error(
+                "template_retrieval_error", template=template_name, error=str(e)
+            )
             raise LLMTemplateError(msg) from e
 
 
@@ -219,6 +221,99 @@ Explain:
 
 Use analogies and context that F1 fans would understand.
 Keep explanation under 300 words.""",
+    "driver_comparison": """Compare the following two F1 drivers:
+
+**{{ driver1.name }}**
+- Wins: {{ driver1.wins }}
+- Podiums: {{ driver1.podiums }}
+- Points: {{ driver1.points }}
+- Recent Form: {{ driver1.recent_form }}
+
+**{{ driver2.name }}**
+- Wins: {{ driver2.wins }}
+- Podiums: {{ driver2.podiums }}
+- Points: {{ driver2.points }}
+- Recent Form: {{ driver2.recent_form }}
+
+Provide a concise comparison (3-4 sentences) highlighting:
+1. Key statistical differences
+2. Recent performance trends
+3. Strengths of each driver
+4. Overall verdict on who has the current edge""",
+    "post_race_analysis": """Write a post-race analysis for:
+
+Race: {{ race_name }}
+Winner: {{ winner }}
+
+Results (Top 10):
+{% for result in results[:10] %}
+{{ result.position }}. {{ result.driver }} - {{ result.gap }}
+{% endfor %}
+
+{% if key_moments %}
+Key Moments:
+{% for moment in key_moments %}
+- {{ moment }}
+{% endfor %}
+{% endif %}
+
+Provide analysis covering:
+1. Winner's performance (2-3 sentences)
+2. Key battles and overtakes
+3. Strategic insights
+4. Championship implications
+
+Word count: 300-400 words.""",
+    "championship_analysis": """Analyze the current F1 championship situation:
+
+Season: {{ season }}
+Round: {{ current_round }} of {{ total_rounds }}
+
+Drivers' Championship:
+{% for standing in driver_standings[:5] %}
+{{ standing.position }}. {{ standing.driver }} - {{ standing.points }} pts
+{% endfor %}
+
+Provide analysis of:
+1. Current title battle state
+2. Key contenders and their chances
+3. Mathematical scenarios
+4. Prediction for season outcome
+
+Be analytical and insightful.""",
+    "qualifying_preview": """Generate a qualifying preview for:
+
+Race: {{ race_name }}
+Circuit: {{ circuit_name }}
+
+Practice Pace Leaders:
+{% for driver in practice_leaders %}
+{{ loop.index }}. {{ driver.name }} - {{ driver.time }}
+{% endfor %}
+
+Weather: {{ weather_conditions }}
+
+Preview should include:
+1. Pole favorites based on practice
+2. Circuit qualifying characteristics
+3. Potential surprises
+4. Pole prediction""",
+    "strategy_analysis": """Analyze race strategy options for:
+
+Race: {{ race_name }}
+Laps: {{ total_laps }}
+Pit Lane Delta: {{ pit_lane_delta }}s
+
+Tire Compounds:
+{% for compound in tire_compounds %}
+- {{ compound.name }}: ~{{ compound.stint_length }} laps
+{% endfor %}
+
+Provide:
+1. Optimal strategy recommendation
+2. Alternative approaches
+3. Key pit windows
+4. Safety car impact scenarios""",
 }
 
 
